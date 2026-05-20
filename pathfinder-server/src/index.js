@@ -5,6 +5,9 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 
+/* ── 프록시 신뢰 설정 (클라우드타입 리버스 프록시 대응) ── */
+app.set('trust proxy', 1);
+
 /* ── 미들웨어 ── */
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
 app.use(express.json({ limit: '50mb' }));  // base64 이미지 허용
