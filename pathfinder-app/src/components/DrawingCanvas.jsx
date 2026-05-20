@@ -52,6 +52,7 @@ export default function DrawingCanvas({ stageIndex, onStageComplete, userGender 
   const [strokeCount, setStrokeCount] = useState(0);
   const [tool, setTool]     = useState('pen');
   const [penSize, setPenSize] = useState(4);
+  const submittedRef = useRef(false); // 더블클릭 방지
 
   const meta = STAGE_META[stageIndex] ?? STAGE_META[0]; // 범위 초과 방어
 
@@ -169,6 +170,8 @@ export default function DrawingCanvas({ stageIndex, onStageComplete, userGender 
   }, []);
 
   const handleNext = useCallback(() => {
+    if (submittedRef.current) return; // 더블클릭 방지
+    submittedRef.current = true;
     const canvas = canvasRef.current;
     const imageData = canvas.toDataURL('image/png');
     const visible   = strokesRef.current.filter(s => !s.erased);
