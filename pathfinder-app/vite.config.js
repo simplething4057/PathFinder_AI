@@ -11,9 +11,11 @@ export default defineConfig({
 
     rollupOptions: {
       output: {
-        manualChunks: {
+        manualChunks(id) {
           // React 코어 — 거의 변경되지 않으므로 별도 캐시
-          'vendor-react': ['react', 'react-dom'],
+          if (id.includes('react') || id.includes('react-dom')) {
+            return 'vendor-react';
+          }
         },
       },
     },
