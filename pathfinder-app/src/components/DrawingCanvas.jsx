@@ -53,7 +53,7 @@ export default function DrawingCanvas({ stageIndex, onStageComplete, userGender 
   const [tool, setTool]     = useState('pen');
   const [penSize, setPenSize] = useState(4);
 
-  const meta = STAGE_META[stageIndex];
+  const meta = STAGE_META[stageIndex] ?? STAGE_META[0]; // 범위 초과 방어
 
   const redraw = useCallback(() => {
     const canvas = canvasRef.current;

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import './App.css';
 import { authApi, sessionApi, tokenStore } from './utils/api';
 
@@ -15,6 +15,7 @@ import CompleteScreen    from './components/CompleteScreen';
 import AnalyzingScreen   from './components/AnalyzingScreen';
 import AnalysisReport    from './components/AnalysisReport';
 import MyPage            from './components/MyPage';
+import AdminDashboard   from './components/AdminDashboard';
 import { generateHTPAnalysis } from './utils/htpAnalysis';
 
 const TOTAL_STAGES = 4;
@@ -24,11 +25,22 @@ export default function App() {
   const [user, setUser]               = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
+  // sessionData 최신 값을 항상 참조하기 위한 ref (stale closure 방지)
+  const sessionDataRef = useRef(null);
+
   // ── 앱 phase ──
-  // auth | history | mypage | consent | pre-sct | intro | load | drawing | questions | complete | analyzing | report
+  // auth | history | mypage | admin | consent | pre-sct | intro | load | drawing | questions | complete | analyzing | report
   const [phase, setPhase]               = useState('auth');
   const [stageIndex, setStageIndex]     = useState(0);
-  const [sessionData, setSessionData]   = useState(null);
+  const [sessionData, setSessionDataRaw]   = useState(null);
+  // setSessionData: state + ref 동시 갱신 (stale closure 방지)
+  const setSessionData = useCallback((valOrUpdater) => {
+    setSessionDataRaw(prev => {
+      const next = typeof valOrUpdater === 'function' ? valOrUpdater(prev) : valOrUpdater;
+      sessionDataRef.current = next;
+      return next;
+    });
+  }, []);
   const [dbSessionId, setDbSessionId]   = useState(null);
   const [analysis, setAnalysis]         = useState(null);
   const [analysisError, setAnalysisError] = useState(null);
@@ -81,6 +93,8 @@ export default function App() {
   /* 소개 → 드로잉 시작 */
   const handleIntroStart = useCallback(async () => {
     const now = new Date().toISOString();
+    // ref를 통해 최신 sessionData 읽기 (stale closure 방지)
+    const latestPreSct = sessionDataRef.current?.preSctAnswers;
     const localData = {
       sessionId: crypto.randomUUID(),
       startedAt: now,
@@ -92,7 +106,7 @@ export default function App() {
         occupation:  user?.occupation,
         family_info: user?.family_info,
       },
-      ...(sessionData?.preSctAnswers ? { preSctAnswers: sessionData.preSctAnswers } : {}),
+      ...(latestPreSct ? { preSctAnswers: latestPreSct } : {}),
     };
     setSessionData(localData);
     setStageIndex(0);
@@ -108,7 +122,7 @@ export default function App() {
     } catch (e) {
       console.warn('[DB] 세션 생성 실패 (로컬 진행):', e.message);
     }
-  }, [user, sessionData]);
+  }, [user]);
 
   const handleGoToLoad = useCallback(() => setPhase('load'), []);
 
@@ -130,6 +144,7 @@ export default function App() {
 
   /* 드로잉 단계 완료 */
   const handleStageComplete = useCallback(async (stageResult) => {
+    console.log('[Stage] 완료:', stageResult.stageKey, '| stageIndex:', stageIndex, '| TOTAL_STAGES:', TOTAL_STAGES);
     const newStages = [...(sessionData?.stages ?? []), stageResult];
     setSessionData(prev => ({ ...prev, stages: newStages }));
 
@@ -142,8 +157,10 @@ export default function App() {
     }
 
     if (stageIndex < TOTAL_STAGES - 1) {
+      console.log('[Stage] 다음 단계로:', stageIndex + 1);
       setStageIndex(i => i + 1);
     } else {
+      console.log('[Stage] 드로잉 완료 → questions');
       setPhase('questions');
     }
   }, [stageIndex, sessionData, dbSessionId]);
@@ -230,7 +247,7 @@ export default function App() {
   }, []);
 
   /* ── 면책 배너 ── */
-  const showDisclaimer = !['auth', 'history', 'mypage', 'consent', 'pre-sct', 'intro'].includes(phase);
+  const showDisclaimer = !['auth', 'history', 'mypage', 'admin', 'consent', 'pre-sct', 'intro'].includes(phase);
 
   /* ════════════════════════════════════════
      로딩 중
@@ -259,6 +276,18 @@ export default function App() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {user && (
             <>
+              {user.role === 'admin' && (
+                <button
+                  onClick={() => setPhase('admin')}
+                  style={{
+                    background: 'none', border: '1px solid #BEE3F8',
+                    borderRadius: 6, padding: '4px 10px',
+                    fontSize: 12, color: '#2E75B6', cursor: 'pointer',
+                  }}
+                >
+                  🛠 관리
+                </button>
+              )}
               <button
                 onClick={() => setPhase('mypage')}
                 style={{
@@ -304,6 +333,13 @@ export default function App() {
             user={user}
             onUpdate={handleUserUpdate}
             onClose={() => setPhase(user ? 'history' : 'auth')}
+          />
+        )}
+
+        {phase === 'admin' && user?.role === 'admin' && (
+          <AdminDashboard
+            user={user}
+            onClose={() => setPhase('history')}
           />
         )}
 

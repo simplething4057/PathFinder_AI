@@ -163,6 +163,21 @@ router.post('/:id/analysis', async (req, res) => {
   }
 });
 
+/* ── DELETE /api/sessions/:id — 세션 삭제 ── */
+router.delete('/:id', async (req, res) => {
+  try {
+    const { rowCount } = await pool.query(
+      'DELETE FROM sessions WHERE id=$1 AND user_id=$2',
+      [req.params.id, req.user.id]
+    );
+    if (rowCount === 0) return res.status(404).json({ error: '세션을 찾을 수 없습니다.' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[sessions/delete]', err.message);
+    res.status(500).json({ error: '세션 삭제 실패' });
+  }
+});
+
 /* ── GET /api/sessions/:id/analysis — 분석 결과 조회 ── */
 router.get('/:id/analysis', async (req, res) => {
   try {

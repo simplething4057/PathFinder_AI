@@ -116,4 +116,33 @@ router.patch('/profile', auth, async (req, res) => {
   }
 });
 
+/* ── PUT /api/auth/password — 비밀번호 변경 ── */
+router.put('/password', auth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: '현재 비밀번호와 새 비밀번호가 필요합니다.' });
+  }
+  if (newPassword.length < 8) {
+    return res.status(400).json({ error: '새 비밀번호는 8자 이상이어야 합니다.' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT password_hash FROM users WHERE id=$1',
+      [req.user.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+
+    const ok = await bcrypt.compare(currentPassword, rows[0].password_hash);
+    if (!ok) return res.status(401).json({ error: '현재 비밀번호가 올바르지 않습니다.' });
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password_hash=$1 WHERE id=$2', [newHash, req.user.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[auth/password]', err.message);
+    res.status(500).json({ error: '비밀번호 변경 실패' });
+  }
+});
+
 module.exports = router;

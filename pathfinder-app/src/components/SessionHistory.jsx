@@ -12,10 +12,12 @@ function toneColor(tone = '') {
 }
 
 export default function SessionHistory({ user, onNewSession, onLoadSession, onLogout }) {
-  const [sessions, setSessions] = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState('');
+  const [sessions, setSessions]   = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState('');
   const [loadingId, setLoadingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [confirmId, setConfirmId]   = useState(null); // 삭제 확인 대상 세션 id
 
   useEffect(() => {
     sessionApi.list()
@@ -23,6 +25,19 @@ export default function SessionHistory({ user, onNewSession, onLoadSession, onLo
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleDelete = async (id) => {
+    setDeletingId(id);
+    try {
+      await sessionApi.delete(id);
+      setSessions(prev => prev.filter(s => s.id !== id));
+    } catch (e) {
+      alert('삭제 실패: ' + e.message);
+    } finally {
+      setDeletingId(null);
+      setConfirmId(null);
+    }
+  };
 
   const handleLoad = async (id) => {
     setLoadingId(id);
@@ -129,15 +144,56 @@ export default function SessionHistory({ user, onNewSession, onLoadSession, onLo
                   </span>
                 )}
 
-                {/* 불러오기 버튼 */}
-                <button
-                  onClick={() => handleLoad(s.id)}
-                  disabled={loadingId === s.id}
-                  className="btn-secondary"
-                  style={{ fontSize: 12, padding: '6px 14px', whiteSpace: 'nowrap' }}
-                >
-                  {loadingId === s.id ? '로딩...' : '불러오기'}
-                </button>
+                {/* 버튼 영역 */}
+                {confirmId === s.id ? (
+                  /* 삭제 확인 인라인 */
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <span style={{ fontSize: 11, color: '#C53030', whiteSpace: 'nowrap' }}>삭제할까요?</span>
+                    <button
+                      onClick={() => handleDelete(s.id)}
+                      disabled={deletingId === s.id}
+                      style={{
+                        fontSize: 11, padding: '4px 10px',
+                        background: '#C53030', color: '#fff',
+                        border: 'none', borderRadius: 6, cursor: 'pointer',
+                      }}
+                    >
+                      {deletingId === s.id ? '...' : '확인'}
+                    </button>
+                    <button
+                      onClick={() => setConfirmId(null)}
+                      style={{
+                        fontSize: 11, padding: '4px 10px',
+                        background: 'none', border: '1px solid #CBD5E0',
+                        borderRadius: 6, cursor: 'pointer', color: '#4A5568',
+                      }}
+                    >
+                      취소
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button
+                      onClick={() => handleLoad(s.id)}
+                      disabled={loadingId === s.id}
+                      className="btn-secondary"
+                      style={{ fontSize: 12, padding: '6px 14px', whiteSpace: 'nowrap' }}
+                    >
+                      {loadingId === s.id ? '로딩...' : '불러오기'}
+                    </button>
+                    <button
+                      onClick={() => setConfirmId(s.id)}
+                      style={{
+                        fontSize: 12, padding: '6px 10px',
+                        background: 'none', border: '1px solid #FED7D7',
+                        borderRadius: 6, color: '#C53030', cursor: 'pointer',
+                      }}
+                      title="세션 삭제"
+                    >
+                      🗑
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>

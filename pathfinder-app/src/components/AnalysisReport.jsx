@@ -124,12 +124,15 @@ export default function AnalysisReport({ analysis, sessionData, onRestart }) {
         </div>
       )}
 
-      {/* ══ 아키타입 카드 ══ */}
-      {analysis.archetype && (
-        <ArchetypeCard archetype={analysis.archetype} />
+      {/* ══ 개별 기질·성격 프로파일 ══ */}
+      {analysis.characterProfile && (
+        <CharacterProfileCard
+          profile={analysis.characterProfile}
+          tci={analysis.tciProfile}
+        />
       )}
 
-      {/* ══ Big5 × TCI 프로파일 ══ */}
+      {/* ══ Big5 × 기질 프로파일 ══ */}
       {analysis.big5Profile && (
         <Big5ProfileCard
           big5={analysis.big5Profile}
@@ -265,7 +268,7 @@ export default function AnalysisReport({ analysis, sessionData, onRestart }) {
       </div>
 
       {/* ══ 하단 버튼 ══ */}
-      <div className="btn-group" style={{ justifyContent: 'center' }}>
+      <div className="btn-group no-print" style={{ justifyContent: 'center' }}>
         <button className="btn-secondary" onClick={handlePrint}>🖨 인쇄 / PDF 저장</button>
         <button className="btn-primary"
           style={{ width: 'auto', padding: '10px 28px', fontSize: 14 }}
@@ -469,65 +472,97 @@ function IndicatorCard({ indicator, meta }) {
 }
 
 /* ════════════════════════════════════════════════════════════
-   ArchetypeCard — 캐릭터 아키타입
+   CharacterProfileCard — 개별 기질·성격 프로파일
    ════════════════════════════════════════════════════════════ */
-const ARCHETYPE_META = {
-  explorer:   { emoji: '🧭', color: '#C05621', bg: '#FEF3E8', border: '#FBD38D' },
-  guardian:   { emoji: '🛡',  color: '#2C7A7B', bg: '#E6FFFA', border: '#81E6D9' },
-  thinker:    { emoji: '🔭', color: '#6B46C1', bg: '#FAF5FF', border: '#D6BCFA' },
-  harmonizer: { emoji: '🎵', color: '#276749', bg: '#E6F4EC', border: '#9AE6B4' },
-  pioneer:    { emoji: '⚡', color: '#1A365D', bg: '#EBF4FF', border: '#90CDF4' },
-  observer:   { emoji: '🌊', color: '#2D3748', bg: '#F7FAFC', border: '#CBD5E0' },
+const TCI_LEVEL_META = {
+  high: { label: '상', bg: '#EBF4FF', color: '#2E75B6' },
+  mid:  { label: '중', bg: '#F0EBF8', color: '#7B5EA7' },
+  low:  { label: '하', bg: '#F7FAFC', color: '#718096' },
 };
+const TCI_DIM_LABELS = { NS: '새로움 추구', HA: '위험 회피', RD: '보상 의존', P: '인내' };
 
-function ArchetypeCard({ archetype }) {
-  const meta = ARCHETYPE_META[archetype.key] ?? ARCHETYPE_META.observer;
-
+function CharacterProfileCard({ profile, tci }) {
   return (
     <div className="card" style={{ marginBottom: 16 }}>
-      <div className="card-header" style={{ background: meta.color }}>
-        <h1>{meta.emoji} 캐릭터 아키타입</h1>
-        <p>Big5 프로파일 × HTP 상징 기반 성격 유형</p>
+      <div className="card-header" style={{ background: 'linear-gradient(135deg, #2C5282 0%, #2B6CB0 100%)' }}>
+        <h1>🧬 기질 × 성격 프로파일</h1>
+        <p>기질 × 성격 — 개별 분석</p>
       </div>
       <div className="card-body">
 
-        {/* 아키타입 이름 + 태그라인 */}
-        <div style={{
-          textAlign: 'center', padding: '20px 16px 16px',
-          background: meta.bg, borderRadius: 12,
-          border: `2px solid ${meta.border}`,
-          marginBottom: 20,
-        }}>
-          <div style={{ fontSize: 48, marginBottom: 8 }}>{meta.emoji}</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: meta.color, marginBottom: 6 }}>
-            {archetype.name}
+        {/* 기질 수준 칩 */}
+        {tci && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+            {Object.entries(TCI_DIM_LABELS).map(([dim, dimLabel]) => {
+              const entry = tci[dim];
+              const lvMeta = TCI_LEVEL_META[entry?.level] ?? TCI_LEVEL_META.mid;
+              return (
+                <div key={dim} style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  background: lvMeta.bg, borderRadius: 20,
+                  padding: '5px 12px', fontSize: 12,
+                  border: `1px solid ${lvMeta.color}22`,
+                }}>
+                  <span style={{ fontWeight: 800, color: lvMeta.color }}>{lvMeta.label}</span>
+                  <span style={{ color: '#4A5568' }}>{dimLabel}</span>
+                </div>
+              );
+            })}
           </div>
-          <div style={{
-            fontSize: 14, color: '#4A5568', fontStyle: 'italic',
-            lineHeight: 1.6, maxWidth: 420, margin: '0 auto',
-          }}>
-            "{archetype.tagline}"
-          </div>
-        </div>
+        )}
 
-        {/* 서사 */}
-        <div style={{
-          padding: '14px 16px', background: '#F7FAFC',
-          borderRadius: 8, fontSize: 14, color: '#2D3748',
-          lineHeight: 1.9, borderLeft: `4px solid ${meta.color}`,
-          marginBottom: 16,
-        }}>
-          {archetype.description}
-        </div>
+        {/* 핵심 심리 주제 */}
+        {profile.coreTheme && (
+          <div style={{
+            padding: '12px 16px', background: '#EBF4FF',
+            borderRadius: 8, borderLeft: '4px solid #2E75B6',
+            fontSize: 14, fontWeight: 600, color: '#1A365D',
+            lineHeight: 1.7, marginBottom: 16,
+          }}>
+            💡 {profile.coreTheme}
+          </div>
+        )}
+
+        {/* 기질 서사 */}
+        {profile.temperamentNarrative && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#2C7A7B', marginBottom: 6 }}>
+              🔬 기질 분석
+            </div>
+            <div style={{
+              padding: '14px 16px', background: '#E6FFFA',
+              borderRadius: 8, fontSize: 14, color: '#2D3748',
+              lineHeight: 1.9, borderLeft: '4px solid #2C7A7B',
+            }}>
+              {profile.temperamentNarrative}
+            </div>
+          </div>
+        )}
+
+        {/* 성격 서사 */}
+        {profile.personalityNarrative && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#6B46C1', marginBottom: 6 }}>
+              🧠 Big5 성격 분석
+            </div>
+            <div style={{
+              padding: '14px 16px', background: '#FAF5FF',
+              borderRadius: 8, fontSize: 14, color: '#2D3748',
+              lineHeight: 1.9, borderLeft: '4px solid #6B46C1',
+            }}>
+              {profile.personalityNarrative}
+            </div>
+          </div>
+        )}
 
         {/* 강점 + 성장 과제 */}
-        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 14 }}>
+        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 200 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: '#38A169', marginBottom: 8 }}>
               💪 핵심 강점
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {(archetype.strengths ?? []).map((s, i) => (
+              {(profile.strengths ?? []).map((s, i) => (
                 <div key={i} style={{
                   display: 'flex', gap: 8, alignItems: 'center',
                   background: '#E6F4EC', borderRadius: 6,
@@ -547,29 +582,17 @@ function ArchetypeCard({ archetype }) {
               padding: '10px 12px', background: '#FEF3E8',
               borderRadius: 6, fontSize: 13, color: '#7B341E', lineHeight: 1.7,
             }}>
-              {archetype.growthEdge}
+              {profile.growthEdge}
             </div>
           </div>
         </div>
-
-        {/* HTP 상징 연결 */}
-        {archetype.htpSymbol && (
-          <div style={{
-            padding: '10px 14px', background: meta.bg,
-            borderRadius: 8, border: `1px solid ${meta.border}`,
-            fontSize: 13, color: '#4A5568', lineHeight: 1.7,
-          }}>
-            <strong style={{ color: meta.color }}>🎨 HTP 상징 연결:</strong>{' '}
-            {archetype.htpSymbol}
-          </div>
-        )}
       </div>
     </div>
   );
 }
 
 /* ════════════════════════════════════════════════════════════
-   Big5ProfileCard — 레이더 차트 + TCI 프로파일
+   Big5ProfileCard — 레이더 차트 + 기질 프로파일
    ════════════════════════════════════════════════════════════ */
 const BIG5_META = {
   O: { label: '개방성', fullLabel: 'Openness',        color: '#7B5EA7', low: '보수적·실용적', high: '창의적·호기심' },
@@ -666,7 +689,7 @@ function Big5ProfileCard({ big5, tci, tciAnchors }) {
   return (
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="card-header" style={{ background: 'linear-gradient(135deg, #1A365D 0%, #2E75B6 100%)' }}>
-        <h1>📊 Big5 × TCI 성격 프로파일</h1>
+        <h1>📊 Big5 × 기질 성격 프로파일</h1>
         <p>드로잉 이미지 40% · 과정 지표 35% · 언어 반응 25% 가중 합산</p>
       </div>
       <div className="card-body">
@@ -758,16 +781,16 @@ function Big5ProfileCard({ big5, tci, tciAnchors }) {
           })}
         </div>
 
-        {/* TCI 기질 프로파일 */}
+        {/* 기질 프로파일 */}
         {tci && (
           <div>
             <div style={{
               fontSize: 12, fontWeight: 700, color: '#718096',
               marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6,
             }}>
-              <span>🧬 TCI 기질 프로파일</span>
+              <span>🧬 기질 프로파일</span>
               <span style={{ fontSize: 10, color: '#A0AEC0', fontWeight: 400 }}>
-                (Cloninger의 신경생물학적 기질 4차원)
+                (새로움 추구·위험 회피·보상 의존·인내 4차원)
               </span>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
@@ -812,7 +835,7 @@ function Big5ProfileCard({ big5, tci, tciAnchors }) {
           </div>
         )}
 
-        {/* TCI 행동닻 해석 */}
+        {/* 기질 행동닻 해석 */}
         {tciAnchors && (
           <div style={{
             padding: '12px 14px', background: '#F0EBF8',

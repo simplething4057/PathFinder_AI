@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { userApi } from '../utils/api';
+import { userApi, authApi } from '../utils/api';
 
 export default function MyPage({ user, onUpdate, onClose }) {
   const [form, setForm] = useState({
@@ -12,7 +12,36 @@ export default function MyPage({ user, onUpdate, onClose }) {
   const [saved,  setSaved]  = useState(false);
   const [error,  setError]  = useState('');
 
+  // 비밀번호 변경
+  const [pwOpen,    setPwOpen]    = useState(false);
+  const [pwForm,    setPwForm]    = useState({ current: '', next: '', confirm: '' });
+  const [pwSaving,  setPwSaving]  = useState(false);
+  const [pwError,   setPwError]   = useState('');
+  const [pwSuccess, setPwSuccess] = useState(false);
+
   const update = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const updatePw = (k, v) => setPwForm(p => ({ ...p, [k]: v }));
+
+  const handlePasswordChange = async () => {
+    setPwError('');
+    if (pwForm.next !== pwForm.confirm) {
+      setPwError('새 비밀번호가 일치하지 않습니다.'); return;
+    }
+    if (pwForm.next.length < 8) {
+      setPwError('새 비밀번호는 8자 이상이어야 합니다.'); return;
+    }
+    setPwSaving(true);
+    try {
+      await authApi.changePassword(pwForm.current, pwForm.next);
+      setPwSuccess(true);
+      setPwForm({ current: '', next: '', confirm: '' });
+      setTimeout(() => { setPwSuccess(false); setPwOpen(false); }, 2000);
+    } catch (e) {
+      setPwError(e.message);
+    } finally {
+      setPwSaving(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -131,6 +160,64 @@ export default function MyPage({ user, onUpdate, onClose }) {
             ⚠️ {error}
           </div>
         )}
+
+        {/* 비밀번호 변경 아코디언 */}
+        <div style={{
+          border: '1px solid #E2E8F0', borderRadius: 8,
+          marginBottom: 16, overflow: 'hidden',
+        }}>
+          <button
+            type="button"
+            onClick={() => { setPwOpen(o => !o); setPwError(''); setPwSuccess(false); }}
+            style={{
+              width: '100%', padding: '11px 16px',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              background: pwOpen ? '#EBF4FF' : '#F7FAFC',
+              border: 'none', cursor: 'pointer',
+              fontSize: 13, fontWeight: 600, color: '#2D3748',
+            }}
+          >
+            <span>🔐 비밀번호 변경</span>
+            <span style={{ fontSize: 10, color: '#A0AEC0' }}>{pwOpen ? '▲' : '▼'}</span>
+          </button>
+
+          {pwOpen && (
+            <div style={{ padding: '16px', borderTop: '1px solid #E2E8F0' }}>
+              {['current', 'next', 'confirm'].map((key, i) => (
+                <div key={key} style={{ marginBottom: i < 2 ? 12 : 0 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#4A5568', display: 'block', marginBottom: 4 }}>
+                    {key === 'current' ? '현재 비밀번호' : key === 'next' ? '새 비밀번호' : '새 비밀번호 확인'}
+                  </label>
+                  <input
+                    type="password"
+                    value={pwForm[key]}
+                    onChange={e => updatePw(key, e.target.value)}
+                    placeholder={key === 'current' ? '현재 비밀번호 입력' : '8자 이상'}
+                    style={inputStyle}
+                    onFocus={e => e.target.style.borderColor = '#2E75B6'}
+                    onBlur={e => e.target.style.borderColor = '#CBD5E0'}
+                  />
+                </div>
+              ))}
+
+              {pwError && (
+                <div style={{ fontSize: 12, color: '#C53030', marginTop: 10 }}>⚠️ {pwError}</div>
+              )}
+              {pwSuccess && (
+                <div style={{ fontSize: 12, color: '#38A169', marginTop: 10 }}>✓ 비밀번호가 변경되었습니다.</div>
+              )}
+
+              <button
+                className="btn-primary"
+                onClick={handlePasswordChange}
+                disabled={pwSaving}
+                style={{ marginTop: 12, fontSize: 13 }}
+              >
+                {pwSaving ? '변경 중...' : '비밀번호 변경'}
+              </button>
+            </div>
+          )}
+        </div>
 
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn-primary" onClick={handleSave} disabled={saving}

@@ -39,6 +39,9 @@ export const authApi = {
     req('POST', '/api/auth/login', { email, password }),
 
   me: () => req('GET', '/api/auth/me'),
+
+  changePassword: (currentPassword, newPassword) =>
+    req('PUT', '/api/auth/password', { currentPassword, newPassword }),
 };
 
 /* ════════════════════════════════════════
@@ -73,4 +76,24 @@ export const sessionApi = {
 
   getAnalysis: (sessionId) =>
     req('GET', `/api/sessions/${sessionId}/analysis`),
+
+  delete: (id) =>
+    req('DELETE', `/api/sessions/${id}`),
+};
+
+/* ════════════════════════════════════════
+   관리자
+   ════════════════════════════════════════ */
+export const adminApi = {
+  stats: () =>
+    req('GET', '/api/admin/stats'),
+
+  users: (page = 1, limit = 20) =>
+    req('GET', `/api/admin/users?page=${page}&limit=${limit}`),
+
+  sessions: (limit = 20) =>
+    req('GET', `/api/admin/sessions?limit=${limit}`),
+
+  changeRole: (userId, role) =>
+    req('PATCH', `/api/admin/users/${userId}/role`, { role }),
 };

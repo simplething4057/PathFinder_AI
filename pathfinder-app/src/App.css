@@ -401,6 +401,46 @@ canvas { display: block; max-width: 100%; }
   border: 1px solid var(--border);
 }
 
+/* ── 인쇄 / PDF 저장 ─────────────────────────────────────── */
+@media print {
+  /* 헤더·면책 배너·네비게이션 숨기기 */
+  .app-header,
+  .disclaimer-banner,
+  .btn-next,
+  .btn-group,
+  .toolbar,
+  .drawing-footer,
+  .no-print {
+    display: none !important;
+  }
+
+  /* 배경색 제거 (잉크 절약 + 프린터 호환) */
+  body, #root {
+    background: #fff !important;
+  }
+
+  /* 카드 그림자·배경 단순화 */
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+    break-inside: avoid;
+  }
+
+  /* 보고서 전체 너비 활용 */
+  .app-body {
+    padding: 0 !important;
+  }
+
+  /* 차트·그림 페이지 잘림 방지 */
+  img, svg, canvas {
+    break-inside: avoid;
+    max-width: 100% !important;
+  }
+
+  /* 링크 URL 숨기기 */
+  a[href]::after { content: none !important; }
+}
+
 .btn-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .btn-secondary {
   padding: 9px 20px;

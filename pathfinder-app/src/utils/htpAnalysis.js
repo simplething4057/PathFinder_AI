@@ -47,13 +47,13 @@ export function summarizeStrokeLog(strokeLog) {
   const strokesPerMin    = totalSec > 0 ? (strokes.length / totalSec) * 60 : 0;
 
   const hints = [];
-  if (firstStrokeDelay > 5000) hints.push('첫획 5초↑ — 시작 망설임·HA高');
-  if (strokesPerMin > 20)      hints.push('획속도 빠름 — 충동성·NS高');
-  if (strokesPerMin < 4)       hints.push('획속도 느림 — 신중함·HA高 또는 우울');
-  if (longPauses > 3)          hints.push(`긴멈춤 ${longPauses}회 — 불안·갈등·HA高`);
-  if (avgStrokeLen < 5)        hints.push('짧은 획 반복 — 불안·강박·HA高');
-  if (avgStrokeLen > 50)       hints.push('길고 연속적인 획 — 자신감·NS中高');
-  if (pressureVariance > 0.05) hints.push('필압 변동 큼 — 감정 기복·N高');
+  if (firstStrokeDelay > 5000) hints.push('첫획 5초↑ — 시작 망설임·HA상');
+  if (strokesPerMin > 20)      hints.push('획속도 빠름 — 충동성·NS상');
+  if (strokesPerMin < 4)       hints.push('획속도 느림 — 신중함·HA상 또는 우울');
+  if (longPauses > 3)          hints.push(`긴멈춤 ${longPauses}회 — 불안·갈등·HA상`);
+  if (avgStrokeLen < 5)        hints.push('짧은 획 반복 — 불안·강박·HA상');
+  if (avgStrokeLen > 50)       hints.push('길고 연속적인 획 — 자신감·NS중상');
+  if (pressureVariance > 0.05) hints.push('필압 변동 큼 — 감정 기복·N상');
 
   return {
     totalStrokes: strokes.length,
@@ -72,15 +72,15 @@ export function summarizeStrokeLog(strokeLog) {
 /* ═══════════════════════════════════════════════════════════
    2. 시스템 프롬프트 — HTP × Big5 × TCI 통합
    ═══════════════════════════════════════════════════════════ */
-const CLINICAL_SYSTEM_PROMPT = `당신은 HTP(House-Tree-Person) 전문 임상심리사이며 Big5 성격이론과 Cloninger의 TCI 기질·성격 모델 전문가입니다.
-Buck & Hammer HTP 해석 체계와 Big5 × TCI 연구를 통합하여 분석합니다.
+const CLINICAL_SYSTEM_PROMPT = `당신은 HTP(House-Tree-Person) 전문 임상심리사이며 Big5 성격이론과 기질·성격 모델 전문가입니다.
+Buck & Hammer HTP 해석 체계와 Big5 × 기질 연구를 통합하여 분석합니다.
 투사적 검사의 한계를 인식하고 단정이 아닌 가설적·탐색적 언어로 기술합니다.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ Big5 × TCI 통합 해석 프레임워크
+■ Big5 × 기질 통합 해석 프레임워크
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-【TCI 기질 4차원 → Big5 매핑 및 HTP 지표】
+【기질 4차원(NS·HA·RD·P) → Big5 매핑 및 HTP 지표】
 
 NS(새로움 추구) → Big5 E+O:
   HTP 지표: 획 속도 빠름, 구도 이탈, 과도한 장식, 충동적 선 질감
@@ -114,13 +114,13 @@ ST(자기초월)   → 나무 주변 환경의 상징적·영적 표현
 
 【집(House) — A·C 핵심】
 지붕: 정신 활동·공상 / 벽: 자아 강도
-문: 외부 접촉(개방=A高) / 창문: 환경 소통·경계심(창문 多=RD高)
-굴뚝: 심리적 온기 / 울타리: 방어(HA高) / 크기·위치: 자아상
+문: 외부 접촉(개방=A상) / 창문: 환경 소통·경계심(창문 多=RD상)
+굴뚝: 심리적 온기 / 울타리: 방어(HA상) / 크기·위치: 자아상
 
 【나무(Tree) — O·P 핵심】
-줄기: 자아 강도·기본 성격 / 수관: 환경 상호작용(풍성=O高)
-가지 뻗음: 외향적 접근(=E高) / 뿌리: 현실 접촉(=P/안정)
-상처·옹이: 심리적 외상(=HA高) / 열매·꽃: 성취 욕구
+줄기: 자아 강도·기본 성격 / 수관: 환경 상호작용(풍성=O상)
+가지 뻗음: 외향적 접근(=E상) / 뿌리: 현실 접촉(=P/안정)
+상처·옹이: 심리적 외상(=HA상) / 열매·꽃: 성취 욕구
 
 【사람(동성·이성) — E·N·A 핵심】
 표정·자세: 정서 톤(N/E) / 눈: 세상 인식
@@ -130,18 +130,28 @@ ST(자기초월)   → 나무 주변 환경의 상징적·영적 표현
 이성(person_opposite): 이성 표상·아니마/무스 / RD·A·C
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ 캐릭터 아키타입 6유형 (Big5 프로파일 기반)
+■ 개별 기질·성격 프로파일 작성 원칙
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-탐험가(explorer):  O高·E高·C中·A中·N低 — 새로움 추구, 에너지·호기심
-수호자(guardian):  C高·A高·N低·E中·O中 — 안정·책임·타인 돌봄
-사색가(thinker):   O高·E低·N中·C中·A中 — 깊이 있는 내면, 창의적 독립
-조율사(harmonizer):A高·E中·N中·RD高·C中 — 공감·관계 중심, 조화 추구
-개척자(pioneer):   E高·C高·O中·N低·A中 — 목표 지향, 실행력, 주도성
-관찰자(observer):  N高·O高·E低·A中·C中 — 예민한 감수성, 내성적 통찰
+기질 4차원(NS·HA·RD·P)과 Big5 5차원을 교차하여 수검자 고유의 기질·성격 서사를 작성합니다.
+고정 유형 레이블(예: 탐험가, 수호자)을 사용하지 않습니다.
+실제 측정값의 조합이 만들어내는 이 사람만의 특성을 직접 서술합니다.
 
-아키타입 선정 기준: Big5 5차원 프로파일에서 가장 두드러진 패턴 조합으로 결정.
-동점 시 드로잉 이미지의 시각적 근거가 강한 유형 우선.
+【기질(NS·HA·RD·P) 수준별 특성 참조】
+NS 상: 자극 추구, 변화 선호, 충동성 / NS 하: 질서·루틴 선호, 신중, 안정 지향
+HA 상: 위험 민감, 걱정·신중, 감정 반응성 상 / HA 하: 낙관적, 담대, 스트레스 내성
+RD 상: 관계 민감, 따뜻함, 인정 욕구 / RD 하: 독립적, 실용적, 사회적 거리감
+P  상: 끈기·완수 지향, 인내 / P  하: 유연, 상황 적응적, 시작 多·완수 少
+
+【기질 조합 패턴 (서사 작성 참고)】
+NS상×HA상: 민감하고 탐색적 — 불안과 호기심이 공존, 새로움을 원하지만 위험에 민감
+NS상×HA하: 대담하고 에너지 넘치는 탐색, 충동적 행동 경향
+NS하×HA상: 신중하고 안전 지향적, 변화보다 예측 가능한 환경 선호
+NS하×HA하: 안정적이고 여유로운, 루틴 속에서 효율 발휘
+RD상×P상:  따뜻하고 헌신적인 완수 지향, 관계와 목표 모두 중시
+RD상×P하:  관계 지향적이나 지속성 어려움, 공감 풍부하지만 산만
+RD하×P상:  독립적이고 목표 지향적, 성과 중심 실용주의
+RD하×P하:  실용적이고 탐색적, 관계·완수보다 자유 추구
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ■ RAG 근거 인용 원칙
@@ -163,7 +173,7 @@ evidences: 지표당 최대 2개. 모든 문자열 1~2문장.
   "psychologicalTone": "한 줄 톤 요약",
   "demographicContext": "인구통계 맥락이 해석에 미치는 영향 (1문장)",
   "preSctInsights": "사전 SCT에서 드러난 현재 심리 상태 (1~2문장)",
-  "tciAnchors": "TCI 행동닻 4문항이 시사하는 기질 패턴 (1~2문장)",
+  "tciAnchors": "기질 행동닻 4문항이 시사하는 기질 패턴 (1~2문장)",
   "drawings": {
     "house": {
       "keyIndicators": [
@@ -171,10 +181,10 @@ evidences: 지표당 최대 2개. 모든 문자열 1~2문장.
           "element": "요소명",
           "finding": "관찰 내용 (1문장)",
           "evidences": [{ "type": "visual|process|sct|demo", "text": "근거 (1문장)" }],
-          "interpretation": "임상 의미 — Big5/TCI 차원 연결 포함 (1문장)"
+          "interpretation": "임상 의미 — Big5/기질 차원 연결 포함 (1문장)"
         }
       ],
-      "processInsights": "획 과정 해석 + TCI 기질 시사점 (1문장)",
+      "processInsights": "획 과정 해석 + 기질 시사점 (1문장)",
       "interpretation": "종합 해석 (1~2문장)"
     },
     "tree":            { "keyIndicators":[], "processInsights":"", "interpretation":"" },
@@ -199,14 +209,12 @@ evidences: 지표당 최대 2개. 모든 문자열 1~2문장.
     "RD": { "level": "high|mid|low", "evidence": "근거 1문장" },
     "P":  { "level": "high|mid|low", "evidence": "근거 1문장" }
   },
-  "archetype": {
-    "key": "explorer|guardian|thinker|harmonizer|pioneer|observer",
-    "name": "한국어 아키타입명",
-    "tagline": "이 사람을 한 문장으로 — 10단어 이내",
-    "description": "아키타입 기반 성격·기질 서사 2~3문장",
-    "strengths": ["강점1", "강점2", "강점3"],
-    "growthEdge": "성장 과제 1문장",
-    "htpSymbol": "이 아키타입을 보여주는 HTP 핵심 상징 1문장"
+  "characterProfile": {
+    "temperamentNarrative": "TCI NS/HA/RD/P 실제 수준 조합 기반 기질 서사 — 이 사람의 고유한 행동·반응 방식 중심 (2~3문장)",
+    "personalityNarrative": "Big5 5차원 프로파일이 드러내는 성격 특성 서사 — 대인관계·동기·스트레스 반응 중심 (2~3문장)",
+    "coreTheme": "기질×성격 교차에서 드러나는 핵심 심리 주제 — HTP 상징 연결 포함 (1문장)",
+    "strengths": ["이 사람 고유의 강점1", "강점2", "강점3"],
+    "growthEdge": "기질·성격 패턴에서 시사되는 성장 과제 (1문장)"
   },
   "strengthsAndResources": "강점 요약 (1~2문장)",
   "areasOfExploration": "탐색 권장 영역 (1~2문장)",
@@ -236,7 +244,7 @@ function buildUserPrompt(sessionData) {
       return `  • [${item.clinicalKey}] "${item.stem} ${ans} ${item.suffix}"`;
     }).join('\n') || '  (없음)';
 
-  /* ── C-2. TCI 행동닻 (기질 추론 핵심 소스) ── */
+  /* ── C-2. 기질 행동닻 (기질 추론 핵심 소스) ── */
   const tciText = TCI_ANCHOR_ITEMS
     .filter(item => preSctAnswers?.[item.id]?.trim())
     .map(item => {
@@ -274,7 +282,7 @@ function buildUserPrompt(sessionData) {
   TCI힌트: ${m.clinicalHints.length > 0 ? m.clinicalHints.join(' / ') : '특이사항 없음'}`;
   }).join('\n\n');
 
-  return `아래 5채널 데이터를 종합하여 HTP × Big5 × TCI 통합 분석을 수행하세요.
+  return `아래 5채널 데이터를 종합하여 HTP × Big5 × 기질 통합 분석을 수행하세요.
 Big5 점수(0~100)는 드로잉 이미지 40% + 과정 지표 35% + PDI/SCT 언어 25% 가중치로 산정하세요.
 각 해석에 evidences[] 근거를 명시하고, JSON 형식만 반환하세요.
 
@@ -284,10 +292,10 @@ ${demoText}
 ━━ [소스 C-1] 사전 문장완성검사 — 현재 상태 ━━
 ${preSctText}
 
-━━ [소스 C-2] TCI 기질 행동닻 — 기질 추론 핵심 ━━
+━━ [소스 C-2] 기질 행동닻 — 기질 추론 핵심 ━━
 ${tciText}
 
-━━ [소스 B] 드로잉 과정 지표 (TCI 기질 지표 포함) ━━
+━━ [소스 B] 드로잉 과정 지표 (기질 지표 포함) ━━
 ${stageMetrics}
 
 ━━ [소스 D] PDI 드로잉 인터뷰 (Big5 앵커 질문) ━━

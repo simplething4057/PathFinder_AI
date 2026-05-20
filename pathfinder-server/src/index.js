@@ -33,6 +33,7 @@ app.use('/api/auth',     authLimiter,    require('./routes/auth'));
 app.use('/api/users',                    require('./routes/auth'));   // PATCH /api/users/profile
 app.use('/api/sessions',                 require('./routes/sessions'));
 app.use('/api/analyze',  analyzeLimiter, require('./routes/analyze'));
+app.use('/api/admin',                    require('./routes/admin'));
 
 /* ── 헬스체크 ── */
 app.get('/health', (_, res) => res.json({ ok: true }));
@@ -44,6 +45,6 @@ app.use((err, req, res, _next) => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`✅ PathFinder 서버 실행 중 → http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ PathFinder 서버 실행 중 → http://0.0.0.0:${PORT}`);
 });
