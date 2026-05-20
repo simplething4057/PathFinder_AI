@@ -88,8 +88,8 @@ AI 엔진:     Claude Sonnet 4.6 (분석) · Claude Haiku 4.5 (AI 추가 질문)
 ### 1. 저장소 클론
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/pathfinder-ai.git
-cd pathfinder-ai
+git clone https://github.com/simplething4057/PathFinder_AI.git
+cd PathFinder_AI
 ```
 
 ### 2. 백엔드 설정
@@ -252,6 +252,19 @@ DEPLOY.md 파일을 참고하세요. 요약 순서:
 - Rate Limiting: 인증 15분/20회, 분석 1시간/30회
 - 비밀번호는 bcrypt(10 rounds)로 해싱됩니다.
 - `.env` 파일은 `.gitignore`에 포함되어 있습니다.
+
+---
+
+## 주요 기술 결정 사항
+
+### Claude API 스트리밍 (SSE)
+클라우드타입 게이트웨이의 60초 타임아웃을 우회하기 위해 `/api/analyze` 엔드포인트는 SSE 스트리밍 방식으로 Claude API를 호출합니다. `X-Accel-Buffering: no` 헤더로 nginx 버퍼링도 비활성화합니다.
+
+### 분석 토큰 설계
+Claude API 출력 한계(8,192 토큰) 내에서 안정적으로 완료되도록 출력 스키마를 설계했습니다. 드로잉당 keyIndicator 1개, evidences 배열 제거, 모든 텍스트 필드 1문장 제한. `max_tokens: 8000` 설정.
+
+### 드로잉 이미지 저장
+Canvas의 투명 배경이 JPEG 변환 시 검은색으로 나타나는 문제를 방지하기 위해 오프스크린 캔버스에 흰 배경을 먼저 칠한 뒤 드로잉을 합성하여 저장합니다.
 
 ---
 
