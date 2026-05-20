@@ -320,7 +320,7 @@ export async function generateHTPAnalysis(sessionData) {
     const label  = STAGE_LABELS_KO[s.stageKey] ?? s.stageKey;
     return [
       { type: 'text',  text: `▼ [소스 A — ${label} 드로잉 이미지]` },
-      { type: 'image', source: { type: 'base64', media_type: 'image/png', data: base64 } },
+      { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
     ];
   });
 

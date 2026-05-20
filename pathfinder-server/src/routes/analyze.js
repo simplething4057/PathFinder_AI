@@ -49,6 +49,7 @@ router.post('/', auth, async (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // nginx 버퍼링 비활성화
 
     // Anthropic SSE 스트림을 그대로 클라이언트에 중계
     const reader = upstream.body.getReader();
