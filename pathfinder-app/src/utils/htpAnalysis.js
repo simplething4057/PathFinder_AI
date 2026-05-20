@@ -165,59 +165,47 @@ RD하×P하:  실용적이고 탐색적, 관계·완수보다 자유 추구
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ■ 출력 JSON 스키마 (엄수)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-JSON만 반환. 설명·머리말 불가. keyIndicators: 그림당 최대 2개.
-evidences: 지표당 최대 1개. 모든 문자열 1문장(최대).
+JSON만 반환. 설명·머리말 금지. 모든 문자열 필드는 반드시 1문장 이내.
+keyIndicators: 그림당 1개만. evidences 배열 없음. 숫자 필드 외 문자열 최대 50자(한국어 기준).
 
 {
-  "summary": "전반 임상 인상 (1~2문장)",
-  "psychologicalTone": "한 줄 톤 요약",
-  "demographicContext": "인구통계 맥락 (1문장)",
-  "preSctInsights": "사전 SCT 심리 상태 (1문장)",
-  "tciAnchors": "기질 행동닻 시사 패턴 (1문장)",
+  "summary": "전반 임상 인상 (1문장)",
+  "psychologicalTone": "톤 키워드 (3단어 이내)",
+  "preSctInsights": "사전 SCT 요약 (1문장)",
+  "tciAnchors": "기질 행동닻 요약 (1문장)",
   "drawings": {
     "house": {
-      "keyIndicators": [
-        {
-          "element": "요소명",
-          "finding": "관찰 내용 (1문장)",
-          "evidences": [{ "type": "visual|process|sct|demo", "text": "근거 (1문장)" }],
-          "interpretation": "임상 의미 + Big5/기질 차원 (1문장)"
-        }
-      ],
-      "processInsights": "획 과정 + 기질 시사점 (1문장)",
+      "keyIndicators": [{ "element": "요소명", "finding": "관찰 (1문장)", "interpretation": "해석+Big5/기질 (1문장)" }],
       "interpretation": "종합 해석 (1문장)"
     },
-    "tree":            { "keyIndicators":[], "processInsights":"", "interpretation":"" },
-    "person_same":     { "keyIndicators":[], "processInsights":"", "interpretation":"" },
-    "person_opposite": {
-      "keyIndicators":[], "processInsights":"", "interpretation":"",
-      "comparedToSame": "동성 인물상 비교 — RD·A 차원 (1문장)"
-    }
+    "tree":            { "keyIndicators": [{ "element": "", "finding": "", "interpretation": "" }], "interpretation": "" },
+    "person_same":     { "keyIndicators": [{ "element": "", "finding": "", "interpretation": "" }], "interpretation": "" },
+    "person_opposite": { "keyIndicators": [{ "element": "", "finding": "", "interpretation": "" }], "interpretation": "", "comparedToSame": "동·이성 비교 (1문장)" }
   },
-  "sctInsights": "PDI 답변 심리 주제 (1문장)",
-  "crossDrawingThemes": ["주제1 (5단어 이내)", "주제2"],
+  "sctInsights": "PDI 주제 (1문장)",
+  "crossDrawingThemes": ["주제1", "주제2"],
   "big5Profile": {
-    "O": { "score": 0, "label": "개방성", "keySymbol": "HTP 근거 상징", "interpretation": "1문장" },
-    "C": { "score": 0, "label": "성실성", "keySymbol": "HTP 근거 상징", "interpretation": "1문장" },
-    "E": { "score": 0, "label": "외향성", "keySymbol": "HTP 근거 상징", "interpretation": "1문장" },
-    "A": { "score": 0, "label": "친화성", "keySymbol": "HTP 근거 상징", "interpretation": "1문장" },
-    "N": { "score": 0, "label": "신경성", "keySymbol": "HTP 근거 상징", "interpretation": "1문장" }
+    "O": { "score": 0, "label": "개방성", "keySymbol": "근거 상징", "interpretation": "1문장" },
+    "C": { "score": 0, "label": "성실성", "keySymbol": "근거 상징", "interpretation": "1문장" },
+    "E": { "score": 0, "label": "외향성", "keySymbol": "근거 상징", "interpretation": "1문장" },
+    "A": { "score": 0, "label": "친화성", "keySymbol": "근거 상징", "interpretation": "1문장" },
+    "N": { "score": 0, "label": "신경성", "keySymbol": "근거 상징", "interpretation": "1문장" }
   },
   "tciProfile": {
-    "NS": { "level": "high|mid|low", "evidence": "근거 1문장" },
-    "HA": { "level": "high|mid|low", "evidence": "근거 1문장" },
-    "RD": { "level": "high|mid|low", "evidence": "근거 1문장" },
-    "P":  { "level": "high|mid|low", "evidence": "근거 1문장" }
+    "NS": { "level": "high|mid|low", "evidence": "근거 (1문장)" },
+    "HA": { "level": "high|mid|low", "evidence": "근거 (1문장)" },
+    "RD": { "level": "high|mid|low", "evidence": "근거 (1문장)" },
+    "P":  { "level": "high|mid|low", "evidence": "근거 (1문장)" }
   },
   "characterProfile": {
-    "temperamentNarrative": "NS/HA/RD/P 조합 기질 서사 (2문장)",
-    "personalityNarrative": "Big5 프로파일 성격 서사 (2문장)",
-    "coreTheme": "핵심 심리 주제 + HTP 상징 연결 (1문장)",
+    "temperamentNarrative": "기질 서사 (2문장)",
+    "personalityNarrative": "성격 서사 (2문장)",
+    "coreTheme": "핵심 주제 (1문장)",
     "strengths": ["강점1", "강점2"],
     "growthEdge": "성장 과제 (1문장)"
   },
   "strengthsAndResources": "강점 요약 (1문장)",
-  "areasOfExploration": "탐색 권장 영역 (1문장)",
+  "areasOfExploration": "탐색 영역 (1문장)",
   "disclaimer": "본 분석은 임상 진단이 아닌 참고용 정보입니다. 정확한 진단은 전문 임상심리사를 통해 받으시기 바랍니다."
 }`;
 
