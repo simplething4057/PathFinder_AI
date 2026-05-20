@@ -18,12 +18,13 @@ PathFinder AI는 기존 심리 검사의 두 가지 한계를 동시에 해결�
 ## 핵심 기능
 
 ### 🎨 4단계 디지털 드로잉 검사
-집(A·C) → 나무(O·P) → 사람 동성(E·N) → 사람 이성(A·RD) 순서로 진행하며, 각 드로잉에서 측정하는 Big5 차원이 다릅니다. 획의 속도·멈춤·필압을 실시간으로 수집해 TCI 기질(NS·HA·RD·P) 추론에 활용합니다.
+동의 → HTP 안내 → 사전 SCT → 드로잉(4단계) → PDI 인터뷰 순서로 진행합니다.
+집(A·C) → 나무(O·P) → 사람 동성(E·N) → 사람 이성(A·RD) 순서로 각 드로잉에서 측정하는 Big5 차원이 다릅니다. 획의 속도·멈춤·필압을 실시간으로 수집해 TCI 기질(NS·HA·RD·P) 추론에 활용합니다.
 
 ### 📝 통합 데이터 수집 (5채널)
 | 채널 | 내용 | AI 가중치 |
 |------|------|----------|
-| 드로잉 이미지 | 4장 base64 PNG → 시각적 상징 분석 | 40% |
+| 드로잉 이미지 | 4장 base64 JPEG → 시각적 상징 분석 | 40% |
 | 획 과정 지표 | 속도·멈춤·필압 → 기질 추론 | 35% |
 | 사전 SCT | 현재 상태 8문항 + 기질 행동닻 4문항 | 25% |
 | PDI 인터뷰 | Big5 앵커 3문항×4 + AI 심층 질문 | 25% |
@@ -57,7 +58,7 @@ PathFinder AI는 기존 심리 검사의 두 가지 한계를 동시에 해결�
 데이터베이스: PostgreSQL
 AI 엔진:     Claude Sonnet 4.6 (분석) · Claude Haiku 4.5 (AI 추가 질문)
 인증:        JWT + bcryptjs
-배포:        클라우드타입 (백엔드 + DB + 프론트엔드)
+배포:        클라우드타입 (백엔드 + DB) · Vercel (프론트엔드)
 ```
 
 ---
@@ -192,15 +193,15 @@ npm run dev     # http://localhost:5173
 
 ---
 
-## 배포 (클라우드타입)
+## 배포
 
 DEPLOY.md 파일을 참고하세요. 요약 순서:
 
 1. GitHub에 push
-2. 클라우드타입 프로젝트 생성 → PostgreSQL 서비스(`postgresql-prod`) 추가 → 스키마 SQL 실행
-3. 백엔드 서비스 (`pathfinder-server`) 추가 → 환경변수 설정 (`DB_HOST=postgresql-prod`, `DB_PORT=5432` 등)
-4. 프론트엔드 서비스 (`pathfinder-app`) 추가 → `VITE_API_URL` 설정, 실행 명령 `npm run serve`
-5. 백엔드 `CLIENT_ORIGIN`을 프론트엔드 URL로 업데이트
+2. **클라우드타입**: 프로젝트 생성 → PostgreSQL 서비스(`postgresql-prod`) 추가 → 스키마 SQL 실행
+3. **클라우드타입**: 백엔드 서비스 (`pathfinder-server`) 추가 → 환경변수 설정
+4. **Vercel**: `pathfinder-app` 디렉터리를 Root Directory로 지정하여 프론트엔드 배포 → `VITE_API_URL` 환경변수 설정
+5. 백엔드 `CLIENT_ORIGIN`을 Vercel 프론트엔드 URL로 업데이트
 
 > **관리자 계정 생성**: 배포 후 DB에서 직접 지정합니다.
 > ```sql
