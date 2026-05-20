@@ -82,23 +82,21 @@ export default function App() {
      ════════════════════════════════════════ */
 
   const handleNewSession     = useCallback(() => setPhase('consent'), []);
-  const handleConsent        = useCallback(() => setPhase('pre-sct'), []);
+  const handleConsent        = useCallback(() => setPhase('intro'), []);
 
-  /* 사전 SCT 완료 */
-  const handlePreSCTComplete = useCallback((preSctAnswers) => {
-    setSessionData(prev => ({ ...(prev ?? {}), preSctAnswers }));
-    setPhase('intro');
+  /* 소개 → 사전 SCT */
+  const handleIntroStart = useCallback(() => {
+    setPhase('pre-sct');
   }, []);
 
-  /* 소개 → 드로잉 시작 */
-  const handleIntroStart = useCallback(async () => {
+  /* 사전 SCT 완료 → 드로잉 시작 */
+  const handlePreSCTComplete = useCallback(async (preSctAnswers) => {
     const now = new Date().toISOString();
-    // ref를 통해 최신 sessionData 읽기 (stale closure 방지)
-    const latestPreSct = sessionDataRef.current?.preSctAnswers;
     const localData = {
       sessionId: crypto.randomUUID(),
       startedAt: now,
       stages: [],
+      preSctAnswers,
       userProfile: {
         name:        user?.name,
         age:         user?.age,
@@ -106,7 +104,6 @@ export default function App() {
         occupation:  user?.occupation,
         family_info: user?.family_info,
       },
-      ...(latestPreSct ? { preSctAnswers: latestPreSct } : {}),
     };
     setSessionData(localData);
     setStageIndex(0);
@@ -115,10 +112,7 @@ export default function App() {
     try {
       const { session } = await sessionApi.create(now);
       setDbSessionId(session.id);
-      // 사전 SCT 저장
-      if (localData.preSctAnswers) {
-        await sessionApi.update(session.id, { preSctAnswers: localData.preSctAnswers }).catch(() => {});
-      }
+      await sessionApi.update(session.id, { preSctAnswers }).catch(() => {});
     } catch (e) {
       console.warn('[DB] 세션 생성 실패 (로컬 진행):', e.message);
     }

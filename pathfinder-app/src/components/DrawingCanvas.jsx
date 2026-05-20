@@ -173,7 +173,16 @@ export default function DrawingCanvas({ stageIndex, onStageComplete, userGender 
     if (submittedRef.current) return; // 더블클릭 방지
     submittedRef.current = true;
     const canvas = canvasRef.current;
-    const imageData = canvas.toDataURL('image/jpeg', 0.75); // PNG 대비 5~10배 압축
+
+    // JPEG 투명 배경 → 검정 방지: 흰 배경 위에 드로잉 합성
+    const offscreen = document.createElement('canvas');
+    offscreen.width  = CANVAS_W;
+    offscreen.height = CANVAS_H;
+    const octx = offscreen.getContext('2d');
+    octx.fillStyle = '#ffffff';
+    octx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    octx.drawImage(canvas, 0, 0);
+    const imageData = offscreen.toDataURL('image/jpeg', 0.75);
     const visible   = strokesRef.current.filter(s => !s.erased);
     onStageComplete({
       stageKey: meta.key,
