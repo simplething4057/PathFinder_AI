@@ -9,15 +9,6 @@ export default defineConfig({
     // 청크 크기 경고 임계값 (기본 500kb → 800kb로 완화)
     chunkSizeWarningLimit: 800,
 
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          // React 코어 — 거의 변경되지 않으므로 별도 캐시
-          if (id.includes('react') || id.includes('react-dom')) {
-            return 'vendor-react';
-          }
-        },
-      },
-    },
+    rollupOptions: {},
   },
 })

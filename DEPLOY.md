@@ -174,7 +174,7 @@ CREATE TABLE IF NOT EXISTS analysis_results (
 
 5. **배포하기** → 완료 후 도메인 탭에서 **프론트엔드 URL** 복사
 
-> `npm run serve`는 `serve dist -l $PORT`를 실행합니다. 클라우드타입이 `PORT` 환경변수를 자동 주입합니다.
+> `npm run serve`는 `node server.cjs`를 실행합니다. gzip 압축과 SPA fallback이 적용된 Express 기반 정적 서버입니다. 클라우드타입이 `PORT` 환경변수를 자동 주입합니다.
 
 ---
 
