@@ -22,32 +22,50 @@ router.post('/', auth, async (req, res) => {
   }
 
   try {
+    // 스트리밍 모드로 Claude API 호출 — 60초 게이트웨이 타임아웃 우회
     const upstream = await fetch(ANTHROPIC_API, {
       method: 'POST',
       headers: {
-        'Content-Type':    'application/json',
-        'x-api-key':       apiKey,
+        'Content-Type':      'application/json',
+        'x-api-key':         apiKey,
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
         model:      model      ?? 'claude-sonnet-4-6',
-        max_tokens: max_tokens ?? 8192,
+        max_tokens: max_tokens ?? 6000,
         system,
         messages,
+        stream:     true,   // 스트리밍 활성화
       }),
     });
 
-    const data = await upstream.json();
-
     if (!upstream.ok) {
-      const msg = data?.error?.message ?? `Anthropic API 오류 ${upstream.status}`;
+      const errData = await upstream.json().catch(() => ({}));
+      const msg = errData?.error?.message ?? `Anthropic API 오류 ${upstream.status}`;
       return res.status(upstream.status).json({ error: msg });
     }
 
-    res.json(data);
+    // SSE 헤더 설정 — 클라이언트에 스트림 전달
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    // Anthropic SSE 스트림을 그대로 클라이언트에 중계
+    const reader = upstream.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      res.write(decoder.decode(value, { stream: true }));
+    }
+
+    res.end();
   } catch (err) {
     console.error('[analyze]', err.message);
-    res.status(500).json({ error: '분석 요청 중 서버 오류가 발생했습니다.' });
+    if (!res.headersSent) {
+      res.status(500).json({ error: '분석 요청 중 서버 오류가 발생했습니다.' });
+    }
   }
 });
 

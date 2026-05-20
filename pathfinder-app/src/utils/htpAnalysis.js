@@ -351,9 +351,36 @@ export async function generateHTPAnalysis(sessionData) {
     throw new Error(err?.error ?? `분석 API 오류 ${res.status}`);
   }
 
-  const data       = await res.json();
-  const raw        = data.content?.[0]?.text ?? '';
-  const stopReason = data.stop_reason;
+  // SSE 스트림 파싱 — text_delta 이벤트에서 텍스트 조각을 모아 전체 응답 조립
+  const reader  = res.body.getReader();
+  const decoder = new TextDecoder();
+  let raw        = '';
+  let stopReason = null;
+  let buffer     = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const lines = buffer.split('\n');
+    buffer = lines.pop(); // 마지막 미완성 줄은 다음 청크로
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const jsonStr = line.slice(6).trim();
+      if (jsonStr === '[DONE]') continue;
+      try {
+        const evt = JSON.parse(jsonStr);
+        if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
+          raw += evt.delta.text;
+        }
+        if (evt.type === 'message_delta' && evt.delta?.stop_reason) {
+          stopReason = evt.delta.stop_reason;
+        }
+      } catch { /* 파싱 불가 줄 무시 */ }
+    }
+  }
 
   if (stopReason === 'max_tokens') {
     throw new Error('분석 응답이 너무 길어 잘렸습니다. 다시 시도해 주세요.');
