@@ -165,15 +165,15 @@ RD하×P하:  실용적이고 탐색적, 관계·완수보다 자유 추구
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ■ 출력 JSON 스키마 (엄수)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-JSON만 반환. 설명·머리말 불가. keyIndicators: 그림당 최대 3개.
-evidences: 지표당 최대 2개. 모든 문자열 1~2문장.
+JSON만 반환. 설명·머리말 불가. keyIndicators: 그림당 최대 2개.
+evidences: 지표당 최대 1개. 모든 문자열 1문장(최대).
 
 {
-  "summary": "전반 임상 인상 2~3문장",
+  "summary": "전반 임상 인상 (1~2문장)",
   "psychologicalTone": "한 줄 톤 요약",
-  "demographicContext": "인구통계 맥락이 해석에 미치는 영향 (1문장)",
-  "preSctInsights": "사전 SCT에서 드러난 현재 심리 상태 (1~2문장)",
-  "tciAnchors": "기질 행동닻 4문항이 시사하는 기질 패턴 (1~2문장)",
+  "demographicContext": "인구통계 맥락 (1문장)",
+  "preSctInsights": "사전 SCT 심리 상태 (1문장)",
+  "tciAnchors": "기질 행동닻 시사 패턴 (1문장)",
   "drawings": {
     "house": {
       "keyIndicators": [
@@ -181,23 +181,23 @@ evidences: 지표당 최대 2개. 모든 문자열 1~2문장.
           "element": "요소명",
           "finding": "관찰 내용 (1문장)",
           "evidences": [{ "type": "visual|process|sct|demo", "text": "근거 (1문장)" }],
-          "interpretation": "임상 의미 — Big5/기질 차원 연결 포함 (1문장)"
+          "interpretation": "임상 의미 + Big5/기질 차원 (1문장)"
         }
       ],
-      "processInsights": "획 과정 해석 + 기질 시사점 (1문장)",
-      "interpretation": "종합 해석 (1~2문장)"
+      "processInsights": "획 과정 + 기질 시사점 (1문장)",
+      "interpretation": "종합 해석 (1문장)"
     },
     "tree":            { "keyIndicators":[], "processInsights":"", "interpretation":"" },
     "person_same":     { "keyIndicators":[], "processInsights":"", "interpretation":"" },
     "person_opposite": {
       "keyIndicators":[], "processInsights":"", "interpretation":"",
-      "comparedToSame": "동성 인물상과의 비교 — RD·A 차원 중심 (1~2문장)"
+      "comparedToSame": "동성 인물상 비교 — RD·A 차원 (1문장)"
     }
   },
-  "sctInsights": "PDI 답변 전반의 심리 주제 (1~2문장)",
-  "crossDrawingThemes": ["주제1 (5단어 이내)", "주제2", "주제3"],
+  "sctInsights": "PDI 답변 심리 주제 (1문장)",
+  "crossDrawingThemes": ["주제1 (5단어 이내)", "주제2"],
   "big5Profile": {
-    "O": { "score": 0, "label": "개방성", "keySymbol": "HTP 근거 상징 (1어구)", "interpretation": "1문장" },
+    "O": { "score": 0, "label": "개방성", "keySymbol": "HTP 근거 상징", "interpretation": "1문장" },
     "C": { "score": 0, "label": "성실성", "keySymbol": "HTP 근거 상징", "interpretation": "1문장" },
     "E": { "score": 0, "label": "외향성", "keySymbol": "HTP 근거 상징", "interpretation": "1문장" },
     "A": { "score": 0, "label": "친화성", "keySymbol": "HTP 근거 상징", "interpretation": "1문장" },
@@ -210,14 +210,14 @@ evidences: 지표당 최대 2개. 모든 문자열 1~2문장.
     "P":  { "level": "high|mid|low", "evidence": "근거 1문장" }
   },
   "characterProfile": {
-    "temperamentNarrative": "TCI NS/HA/RD/P 실제 수준 조합 기반 기질 서사 — 이 사람의 고유한 행동·반응 방식 중심 (2~3문장)",
-    "personalityNarrative": "Big5 5차원 프로파일이 드러내는 성격 특성 서사 — 대인관계·동기·스트레스 반응 중심 (2~3문장)",
-    "coreTheme": "기질×성격 교차에서 드러나는 핵심 심리 주제 — HTP 상징 연결 포함 (1문장)",
-    "strengths": ["이 사람 고유의 강점1", "강점2", "강점3"],
-    "growthEdge": "기질·성격 패턴에서 시사되는 성장 과제 (1문장)"
+    "temperamentNarrative": "NS/HA/RD/P 조합 기질 서사 (2문장)",
+    "personalityNarrative": "Big5 프로파일 성격 서사 (2문장)",
+    "coreTheme": "핵심 심리 주제 + HTP 상징 연결 (1문장)",
+    "strengths": ["강점1", "강점2"],
+    "growthEdge": "성장 과제 (1문장)"
   },
-  "strengthsAndResources": "강점 요약 (1~2문장)",
-  "areasOfExploration": "탐색 권장 영역 (1~2문장)",
+  "strengthsAndResources": "강점 요약 (1문장)",
+  "areasOfExploration": "탐색 권장 영역 (1문장)",
   "disclaimer": "본 분석은 임상 진단이 아닌 참고용 정보입니다. 정확한 진단은 전문 임상심리사를 통해 받으시기 바랍니다."
 }`;
 
