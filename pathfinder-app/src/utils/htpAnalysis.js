@@ -316,11 +316,13 @@ export async function generateHTPAnalysis(sessionData) {
 
   /* ── 이미지 블록 ── */
   const imageBlocks = stages.flatMap(s => {
-    const base64 = s.imageData.replace(/^data:image\/\w+;base64,/, '');
-    const label  = STAGE_LABELS_KO[s.stageKey] ?? s.stageKey;
+    const match     = s.imageData.match(/^data:(image\/\w+);base64,(.+)/);
+    const mediaType = match?.[1] ?? 'image/png';
+    const base64    = match?.[2] ?? s.imageData;
+    const label     = STAGE_LABELS_KO[s.stageKey] ?? s.stageKey;
     return [
       { type: 'text',  text: `▼ [소스 A — ${label} 드로잉 이미지]` },
-      { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+      { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
     ];
   });
 
