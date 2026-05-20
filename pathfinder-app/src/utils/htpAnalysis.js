@@ -326,7 +326,7 @@ export async function generateHTPAnalysis(sessionData) {
 
   const payload = {
     model:      'claude-sonnet-4-6',
-    max_tokens: 10000,
+    max_tokens: 6000,
     system:     CLINICAL_SYSTEM_PROMPT,
     messages: [{
       role: 'user',
