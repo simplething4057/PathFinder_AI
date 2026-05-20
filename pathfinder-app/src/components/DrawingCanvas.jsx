@@ -76,6 +76,7 @@ export default function DrawingCanvas({ stageIndex, onStageComplete, userGender 
     strokesRef.current  = [];
     strokeIdRef.current = 0;
     startTimeRef.current = Date.now();
+    submittedRef.current = false; // 단계 전환 시 초기화
     setStrokeCount(0);
     setTool('pen');
     const ctx = canvasRef.current?.getContext('2d');
@@ -183,7 +184,8 @@ export default function DrawingCanvas({ stageIndex, onStageComplete, userGender 
     octx.fillRect(0, 0, CANVAS_W, CANVAS_H);
     octx.drawImage(canvas, 0, 0);
     const imageData = offscreen.toDataURL('image/jpeg', 0.75);
-    const visible   = strokesRef.current.filter(s => !s.erased);
+
+    const visible = strokesRef.current.filter(s => !s.erased);
     onStageComplete({
       stageKey: meta.key,
       imageData,
