@@ -1,20 +1,17 @@
 /**
- * htpAnalysis.js — HTP 임상 분석 파이프라인 (복합 분석 버전)
+ * htpAnalysis.js — HTP × Big5 × TCI 통합 임상 분석 파이프라인
  *
- * ※ 보안: Claude API 호출은 백엔드 /api/analyze 를 통해 서버 사이드에서 수행됩니다.
- *    API 키는 서버 환경변수에만 존재하며 브라우저에 노출되지 않습니다.
- *
- * 분석 소스:
+ * 분석 소스 (5채널):
  *  A. 드로잉 이미지 (4장: house / tree / person_same / person_opposite)
- *  B. 드로잉 과정 지표 (stroke log)
- *  C. 사전 SCT (검사 전 상태·자기정보)
- *  D. 사후 SCT (PostDrawingScreen)
+ *  B. 드로잉 과정 지표 (stroke log — NS/HA/P 기질 추론)
+ *  C. 사전 SCT 8문항 + TCI 행동닻 4문항
+ *  D. 드로잉별 PDI 인터뷰 (Big5 앵커 3문항 × 4드로잉 + 전반 3문항)
  *  E. 수검자 인구통계 (나이, 성별, 직업, 가족관계)
  */
 
 import { SCT_STEMS, SCT_SUFFIXES, SCT_KEYS } from '../components/PostDrawingScreen';
-import { PRE_SCT_ITEMS } from '../components/PreSCTScreen';
-import { STAGE_LABELS_KO } from '../constants/stages';
+import { PRE_SCT_ITEMS, TCI_ANCHOR_ITEMS }   from '../components/PreSCTScreen';
+import { STAGE_LABELS_KO }                   from '../constants/stages';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -50,13 +47,13 @@ export function summarizeStrokeLog(strokeLog) {
   const strokesPerMin    = totalSec > 0 ? (strokes.length / totalSec) * 60 : 0;
 
   const hints = [];
-  if (firstStrokeDelay > 5000) hints.push('첫 획까지 5초↑ — 시작 망설임·주제 불안');
-  if (strokesPerMin > 20)      hints.push('획속도 빠름(20획/분↑) — 충동성·에너지 높음');
-  if (strokesPerMin < 4)       hints.push('획속도 느림(4획/분↓) — 신중함·억제·우울');
-  if (longPauses > 3)          hints.push(`긴멈춤 ${longPauses}회(3초↑) — 불안·갈등·재고 경향`);
-  if (avgStrokeLen < 5)        hints.push('짧은 획 반복 — 불안·강박적 통제');
-  if (avgStrokeLen > 50)       hints.push('길고 연속적인 획 — 자신감·유연성');
-  if (pressureVariance > 0.05) hints.push('필압 변동 큼 — 감정 기복·주제별 감정 반응차');
+  if (firstStrokeDelay > 5000) hints.push('첫획 5초↑ — 시작 망설임·HA高');
+  if (strokesPerMin > 20)      hints.push('획속도 빠름 — 충동성·NS高');
+  if (strokesPerMin < 4)       hints.push('획속도 느림 — 신중함·HA高 또는 우울');
+  if (longPauses > 3)          hints.push(`긴멈춤 ${longPauses}회 — 불안·갈등·HA高`);
+  if (avgStrokeLen < 5)        hints.push('짧은 획 반복 — 불안·강박·HA高');
+  if (avgStrokeLen > 50)       hints.push('길고 연속적인 획 — 자신감·NS中高');
+  if (pressureVariance > 0.05) hints.push('필압 변동 큼 — 감정 기복·N高');
 
   return {
     totalStrokes: strokes.length,
@@ -73,63 +70,100 @@ export function summarizeStrokeLog(strokeLog) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   2. 시스템 프롬프트
+   2. 시스템 프롬프트 — HTP × Big5 × TCI 통합
    ═══════════════════════════════════════════════════════════ */
-const CLINICAL_SYSTEM_PROMPT = `당신은 HTP(House-Tree-Person) 검사 전문 임상심리사입니다.
-John Buck과 Emanuel Hammer의 HTP 해석 체계를 기반으로 분석하며,
+const CLINICAL_SYSTEM_PROMPT = `당신은 HTP(House-Tree-Person) 전문 임상심리사이며 Big5 성격이론과 Cloninger의 TCI 기질·성격 모델 전문가입니다.
+Buck & Hammer HTP 해석 체계와 Big5 × TCI 연구를 통합하여 분석합니다.
 투사적 검사의 한계를 인식하고 단정이 아닌 가설적·탐색적 언어로 기술합니다.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ RAG(근거 인용) 원칙
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-각 keyIndicator의 해석은 반드시 아래 중 하나 이상을 evidences[]에 인용하세요:
-• visual  : 이미지에서 직접 관찰된 시각적 특징
-• process : 드로잉 과정 지표 (획/분, 멈춤, 필압 등)
-• sct     : 사전/사후 SCT 완성 문장 (따옴표 사용)
-• demo    : 수검자 인구통계 맥락 (나이, 성별, 직업 등)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ HTP 임상 해석 프레임워크
+■ Big5 × TCI 통합 해석 프레임워크
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-【집(House)】
-지붕: 정신 활동·공상 / 벽: 자아 강도 / 문: 외부 접촉
-창문: 환경 소통·경계심 / 굴뚝: 심리적 온기
-크기·위치: 자아상 (하단→억압, 중앙→안정)
+【TCI 기질 4차원 → Big5 매핑 및 HTP 지표】
 
-【나무(Tree)】
-줄기: 자아 강도·기본 성격 / 수관: 환경 상호작용
-가지: 환경 만족 추구·좌절 / 뿌리: 현실 접촉·안정성
-상처·옹이: 심리적 외상 / 열매·꽃: 성취 욕구
+NS(새로움 추구) → Big5 E+O:
+  HTP 지표: 획 속도 빠름, 구도 이탈, 과도한 장식, 충동적 선 질감
+  PDI 지표: 접근 동기(즐기는 것) 표현, 외향적 활동 언급
 
-【사람(Person) — 동성·이성 비교 필수】
-머리/두부: 지적 기능·공상 / 얼굴·표정: 대인관계 태도
-눈: 세상 인식·의심 / 입: 언어적 의존성·공격성
-목: 충동 통제 / 팔·손: 환경 상호작용
-다리·발: 현실 접촉·지지기반
-동성 인물상(person_same): 현실적 자기상·정체성
-이성 인물상(person_opposite): 이성·대인관계 표상, 아니마/아니무스
+HA(위험 회피) → Big5 N:
+  HTP 지표: 첫획 지연 길다, 긴 멈춤 多, 울타리·담장, 작은 크기, 지우개 흔적
+  PDI 지표: 두려움·걱정 언급, 어려운 것 회피적 표현
+
+RD(보상 의존) → Big5 A:
+  HTP 지표: 창문 多, 따뜻한 이성상 감정 톤, 열린 문
+  PDI 지표: 관계 언어 풍부, 이성상과의 따뜻한 관계 기술
+
+P(인내) → Big5 C:
+  HTP 지표: 완성도 높음, 총 획수 多, 소요시간 길다, 세부 묘사 풍부
+  PDI 지표: 나무 나이 많음, 끈기·지속 표현
+
+【성격차원 → PDI 언어 분석】
+SD(자기주도성) → 동성인 강점 답변, 자기효능감 언어
+C(협동성)      → 이성상 관계 기술, 집 거주자 표현
+ST(자기초월)   → 나무 주변 환경의 상징적·영적 표현
+
+【Big5 점수화 원칙 (0~100)】
+3채널 가중 평균:
+  드로잉 이미지 상징 40% + 드로잉 과정 지표 35% + PDI/SCT 언어 25%
+각 차원 점수 산정 후 반드시 HTP 상징 1개 이상을 근거로 제시
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ 인구통계 맥락 적용 지침
+■ HTP 상징 해석 체계
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• 나이·발달 단계에 따른 규준 고려 (청소년/성인/중장년 해석 차별화)
-• 성별에 따른 인물상 투사 방향성 해석
-• 직업·가족관계는 스트레스원·자원 맥락으로 활용
+
+【집(House) — A·C 핵심】
+지붕: 정신 활동·공상 / 벽: 자아 강도
+문: 외부 접촉(개방=A高) / 창문: 환경 소통·경계심(창문 多=RD高)
+굴뚝: 심리적 온기 / 울타리: 방어(HA高) / 크기·위치: 자아상
+
+【나무(Tree) — O·P 핵심】
+줄기: 자아 강도·기본 성격 / 수관: 환경 상호작용(풍성=O高)
+가지 뻗음: 외향적 접근(=E高) / 뿌리: 현실 접촉(=P/안정)
+상처·옹이: 심리적 외상(=HA高) / 열매·꽃: 성취 욕구
+
+【사람(동성·이성) — E·N·A 핵심】
+표정·자세: 정서 톤(N/E) / 눈: 세상 인식
+목: 충동 통제 / 팔·손: 환경 상호작용(E)
+다리·발: 현실 접촉(C/P)
+동성(person_same): 현실적 자기상·정체성 / NS·E·HA·N
+이성(person_opposite): 이성 표상·아니마/무스 / RD·A·C
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-■ 출력 규칙 (토큰 절약 필수)
+■ 캐릭터 아키타입 6유형 (Big5 프로파일 기반)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• keyIndicators: 그림당 최대 3개
-• evidences: 지표당 최대 2개, 각 text 한 문장 이내
-• 모든 문자열 필드: 1~2문장으로 간결하게
-• JSON만 반환 — 설명·머리말 불가
+
+탐험가(explorer):  O高·E高·C中·A中·N低 — 새로움 추구, 에너지·호기심
+수호자(guardian):  C高·A高·N低·E中·O中 — 안정·책임·타인 돌봄
+사색가(thinker):   O高·E低·N中·C中·A中 — 깊이 있는 내면, 창의적 독립
+조율사(harmonizer):A高·E中·N中·RD高·C中 — 공감·관계 중심, 조화 추구
+개척자(pioneer):   E高·C高·O中·N低·A中 — 목표 지향, 실행력, 주도성
+관찰자(observer):  N高·O高·E低·A中·C中 — 예민한 감수성, 내성적 통찰
+
+아키타입 선정 기준: Big5 5차원 프로파일에서 가장 두드러진 패턴 조합으로 결정.
+동점 시 드로잉 이미지의 시각적 근거가 강한 유형 우선.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■ RAG 근거 인용 원칙
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+각 keyIndicator의 evidences[]에 반드시 하나 이상 인용:
+• visual  : 이미지 직접 관찰 (구체적 시각 요소 명시)
+• process : 드로잉 과정 지표 (획/분, 멈춤, 필압 등 수치 포함)
+• sct     : SCT/PDI 완성 문장 (따옴표로 인용)
+• demo    : 인구통계 맥락
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■ 출력 JSON 스키마 (엄수)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+JSON만 반환. 설명·머리말 불가. keyIndicators: 그림당 최대 3개.
+evidences: 지표당 최대 2개. 모든 문자열 1~2문장.
 
 {
   "summary": "전반 임상 인상 2~3문장",
   "psychologicalTone": "한 줄 톤 요약",
   "demographicContext": "인구통계 맥락이 해석에 미치는 영향 (1문장)",
   "preSctInsights": "사전 SCT에서 드러난 현재 심리 상태 (1~2문장)",
+  "tciAnchors": "TCI 행동닻 4문항이 시사하는 기질 패턴 (1~2문장)",
   "drawings": {
     "house": {
       "keyIndicators": [
@@ -137,21 +171,43 @@ John Buck과 Emanuel Hammer의 HTP 해석 체계를 기반으로 분석하며,
           "element": "요소명",
           "finding": "관찰 내용 (1문장)",
           "evidences": [{ "type": "visual|process|sct|demo", "text": "근거 (1문장)" }],
-          "interpretation": "임상 의미 (1문장)"
+          "interpretation": "임상 의미 — Big5/TCI 차원 연결 포함 (1문장)"
         }
       ],
-      "processInsights": "획 과정 해석 (1문장)",
+      "processInsights": "획 과정 해석 + TCI 기질 시사점 (1문장)",
       "interpretation": "종합 해석 (1~2문장)"
     },
     "tree":            { "keyIndicators":[], "processInsights":"", "interpretation":"" },
     "person_same":     { "keyIndicators":[], "processInsights":"", "interpretation":"" },
     "person_opposite": {
       "keyIndicators":[], "processInsights":"", "interpretation":"",
-      "comparedToSame": "동성 인물상과의 비교 해석 (1~2문장)"
+      "comparedToSame": "동성 인물상과의 비교 — RD·A 차원 중심 (1~2문장)"
     }
   },
-  "sctInsights": "사후 SCT 답변 심리 주제 (1~2문장)",
+  "sctInsights": "PDI 답변 전반의 심리 주제 (1~2문장)",
   "crossDrawingThemes": ["주제1 (5단어 이내)", "주제2", "주제3"],
+  "big5Profile": {
+    "O": { "score": 0, "label": "개방성", "keySymbol": "HTP 근거 상징 (1어구)", "interpretation": "1문장" },
+    "C": { "score": 0, "label": "성실성", "keySymbol": "HTP 근거 상징", "interpretation": "1문장" },
+    "E": { "score": 0, "label": "외향성", "keySymbol": "HTP 근거 상징", "interpretation": "1문장" },
+    "A": { "score": 0, "label": "친화성", "keySymbol": "HTP 근거 상징", "interpretation": "1문장" },
+    "N": { "score": 0, "label": "신경성", "keySymbol": "HTP 근거 상징", "interpretation": "1문장" }
+  },
+  "tciProfile": {
+    "NS": { "level": "high|mid|low", "evidence": "근거 1문장" },
+    "HA": { "level": "high|mid|low", "evidence": "근거 1문장" },
+    "RD": { "level": "high|mid|low", "evidence": "근거 1문장" },
+    "P":  { "level": "high|mid|low", "evidence": "근거 1문장" }
+  },
+  "archetype": {
+    "key": "explorer|guardian|thinker|harmonizer|pioneer|observer",
+    "name": "한국어 아키타입명",
+    "tagline": "이 사람을 한 문장으로 — 10단어 이내",
+    "description": "아키타입 기반 성격·기질 서사 2~3문장",
+    "strengths": ["강점1", "강점2", "강점3"],
+    "growthEdge": "성장 과제 1문장",
+    "htpSymbol": "이 아키타입을 보여주는 HTP 핵심 상징 1문장"
+  },
   "strengthsAndResources": "강점 요약 (1~2문장)",
   "areasOfExploration": "탐색 권장 영역 (1~2문장)",
   "disclaimer": "본 분석은 임상 진단이 아닌 참고용 정보입니다. 정확한 진단은 전문 임상심리사를 통해 받으시기 바랍니다."
@@ -172,7 +228,7 @@ function buildUserPrompt(sessionData) {
     demo.family_info ? `가족관계: ${demo.family_info}` : null,
   ].filter(Boolean).join(' | ') || '(제공 없음)';
 
-  /* ── C. 사전 SCT ── */
+  /* ── C-1. 사전 SCT ── */
   const preSctText = PRE_SCT_ITEMS
     .filter(item => preSctAnswers?.[item.id]?.trim())
     .map(item => {
@@ -180,8 +236,16 @@ function buildUserPrompt(sessionData) {
       return `  • [${item.clinicalKey}] "${item.stem} ${ans} ${item.suffix}"`;
     }).join('\n') || '  (없음)';
 
-  /* ── D. 사후 SCT ── */
-  const sctText = Object.entries(pdiAnswers ?? {})
+  /* ── C-2. TCI 행동닻 (기질 추론 핵심 소스) ── */
+  const tciText = TCI_ANCHOR_ITEMS
+    .filter(item => preSctAnswers?.[item.id]?.trim())
+    .map(item => {
+      const ans = preSctAnswers[item.id].trim();
+      return `  • [${item.clinicalKey}] "${item.stem} ${ans} ${item.suffix}"`;
+    }).join('\n') || '  (없음)';
+
+  /* ── D. PDI 인터뷰 답변 ── */
+  const pdiText = Object.entries(pdiAnswers ?? {})
     .filter(([, v]) => v?.trim())
     .map(([k, v]) => {
       const stem        = SCT_STEMS[k]   ?? k;
@@ -194,7 +258,7 @@ function buildUserPrompt(sessionData) {
   const aiText = Object.entries(aiState ?? {}).flatMap(([stageKey, st]) =>
     (st.questions ?? []).map((q, i) => {
       const ans = st.aiAnswers?.[q.id]?.trim();
-      return ans ? `  • [${stageKey} AI추가${i + 1}] ${q.text}: "${ans}"` : null;
+      return ans ? `  • [${stageKey} AI심층${i + 1}] ${q.text}: "${ans}"` : null;
     }).filter(Boolean)
   ).join('\n') || '  (없음)';
 
@@ -207,31 +271,34 @@ function buildUserPrompt(sessionData) {
   총획수: ${m.totalStrokes}획 | 소요: ${m.durationSec}초 | 획/분: ${m.strokesPerMin}
   평균획길이: ${m.avgStrokeLength}pt | 첫획지연: ${Math.round(m.firstStrokeDelayMs / 1000)}초
   긴멈춤(3초↑): ${m.longPausesCount}회 | 평균필압: ${m.avgPressure}
-  임상힌트: ${m.clinicalHints.length > 0 ? m.clinicalHints.join(' / ') : '특이사항 없음'}`;
+  TCI힌트: ${m.clinicalHints.length > 0 ? m.clinicalHints.join(' / ') : '특이사항 없음'}`;
   }).join('\n\n');
 
-  return `아래 5가지 데이터 소스를 종합하여 HTP 임상 분석을 수행하세요.
-각 해석에는 반드시 evidences[]에 근거 소스(visual/process/sct/demo)를 명시하세요.
-JSON 형식만 반환하고 다른 텍스트는 포함하지 마세요.
+  return `아래 5채널 데이터를 종합하여 HTP × Big5 × TCI 통합 분석을 수행하세요.
+Big5 점수(0~100)는 드로잉 이미지 40% + 과정 지표 35% + PDI/SCT 언어 25% 가중치로 산정하세요.
+각 해석에 evidences[] 근거를 명시하고, JSON 형식만 반환하세요.
 
 ━━ [소스 E] 수검자 인구통계 ━━
 ${demoText}
 
-━━ [소스 C] 사전 문장완성검사 — 검사 전 상태 ━━
+━━ [소스 C-1] 사전 문장완성검사 — 현재 상태 ━━
 ${preSctText}
 
-━━ [소스 B] 드로잉 과정 지표 ━━
+━━ [소스 C-2] TCI 기질 행동닻 — 기질 추론 핵심 ━━
+${tciText}
+
+━━ [소스 B] 드로잉 과정 지표 (TCI 기질 지표 포함) ━━
 ${stageMetrics}
 
-━━ [소스 D] 사후 문장완성검사 ━━
-${sctText}
+━━ [소스 D] PDI 드로잉 인터뷰 (Big5 앵커 질문) ━━
+${pdiText}
 
-━━ [소스 D-AI] AI 추가 질문 ━━
+━━ [소스 D-AI] AI 심층 질문 답변 ━━
 ${aiText}`;
 }
 
 /* ═══════════════════════════════════════════════════════════
-   4. 메인 분석 함수 — 백엔드 프록시 경유
+   4. 메인 분석 함수
    ═══════════════════════════════════════════════════════════ */
 export async function generateHTPAnalysis(sessionData) {
   const token = localStorage.getItem('pf_token');
@@ -239,19 +306,19 @@ export async function generateHTPAnalysis(sessionData) {
 
   const { stages } = sessionData;
 
-  /* ── 이미지 멀티파트 블록 ── */
+  /* ── 이미지 블록 ── */
   const imageBlocks = stages.flatMap(s => {
     const base64 = s.imageData.replace(/^data:image\/\w+;base64,/, '');
     const label  = STAGE_LABELS_KO[s.stageKey] ?? s.stageKey;
     return [
-      { type: 'text',  text: `▼ [소스 A 이미지 — ${label}]` },
+      { type: 'text',  text: `▼ [소스 A — ${label} 드로잉 이미지]` },
       { type: 'image', source: { type: 'base64', media_type: 'image/png', data: base64 } },
     ];
   });
 
   const payload = {
     model:      'claude-sonnet-4-6',
-    max_tokens: 8192,
+    max_tokens: 10000,
     system:     CLINICAL_SYSTEM_PROMPT,
     messages: [{
       role: 'user',
@@ -262,7 +329,6 @@ export async function generateHTPAnalysis(sessionData) {
     }],
   };
 
-  /* ── 백엔드 /api/analyze 호출 ── */
   const res = await fetch(`${API_BASE}/api/analyze`, {
     method:  'POST',
     headers: {

@@ -124,6 +124,20 @@ export default function AnalysisReport({ analysis, sessionData, onRestart }) {
         </div>
       )}
 
+      {/* ══ 아키타입 카드 ══ */}
+      {analysis.archetype && (
+        <ArchetypeCard archetype={analysis.archetype} />
+      )}
+
+      {/* ══ Big5 × TCI 프로파일 ══ */}
+      {analysis.big5Profile && (
+        <Big5ProfileCard
+          big5={analysis.big5Profile}
+          tci={analysis.tciProfile}
+          tciAnchors={analysis.tciAnchors}
+        />
+      )}
+
       {/* ══ 근거 범례 ══ */}
       <div style={{
         display: 'flex', gap: 8, flexWrap: 'wrap',
@@ -449,6 +463,366 @@ function IndicatorCard({ indicator, meta }) {
             {interpretation}
           </span>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   ArchetypeCard — 캐릭터 아키타입
+   ════════════════════════════════════════════════════════════ */
+const ARCHETYPE_META = {
+  explorer:   { emoji: '🧭', color: '#C05621', bg: '#FEF3E8', border: '#FBD38D' },
+  guardian:   { emoji: '🛡',  color: '#2C7A7B', bg: '#E6FFFA', border: '#81E6D9' },
+  thinker:    { emoji: '🔭', color: '#6B46C1', bg: '#FAF5FF', border: '#D6BCFA' },
+  harmonizer: { emoji: '🎵', color: '#276749', bg: '#E6F4EC', border: '#9AE6B4' },
+  pioneer:    { emoji: '⚡', color: '#1A365D', bg: '#EBF4FF', border: '#90CDF4' },
+  observer:   { emoji: '🌊', color: '#2D3748', bg: '#F7FAFC', border: '#CBD5E0' },
+};
+
+function ArchetypeCard({ archetype }) {
+  const meta = ARCHETYPE_META[archetype.key] ?? ARCHETYPE_META.observer;
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card-header" style={{ background: meta.color }}>
+        <h1>{meta.emoji} 캐릭터 아키타입</h1>
+        <p>Big5 프로파일 × HTP 상징 기반 성격 유형</p>
+      </div>
+      <div className="card-body">
+
+        {/* 아키타입 이름 + 태그라인 */}
+        <div style={{
+          textAlign: 'center', padding: '20px 16px 16px',
+          background: meta.bg, borderRadius: 12,
+          border: `2px solid ${meta.border}`,
+          marginBottom: 20,
+        }}>
+          <div style={{ fontSize: 48, marginBottom: 8 }}>{meta.emoji}</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: meta.color, marginBottom: 6 }}>
+            {archetype.name}
+          </div>
+          <div style={{
+            fontSize: 14, color: '#4A5568', fontStyle: 'italic',
+            lineHeight: 1.6, maxWidth: 420, margin: '0 auto',
+          }}>
+            "{archetype.tagline}"
+          </div>
+        </div>
+
+        {/* 서사 */}
+        <div style={{
+          padding: '14px 16px', background: '#F7FAFC',
+          borderRadius: 8, fontSize: 14, color: '#2D3748',
+          lineHeight: 1.9, borderLeft: `4px solid ${meta.color}`,
+          marginBottom: 16,
+        }}>
+          {archetype.description}
+        </div>
+
+        {/* 강점 + 성장 과제 */}
+        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 14 }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#38A169', marginBottom: 8 }}>
+              💪 핵심 강점
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {(archetype.strengths ?? []).map((s, i) => (
+                <div key={i} style={{
+                  display: 'flex', gap: 8, alignItems: 'center',
+                  background: '#E6F4EC', borderRadius: 6,
+                  padding: '6px 10px', fontSize: 13, color: '#276749',
+                }}>
+                  <span style={{ color: '#38A169', flexShrink: 0 }}>✓</span>
+                  {s}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#C05621', marginBottom: 8 }}>
+              🌱 성장 과제
+            </div>
+            <div style={{
+              padding: '10px 12px', background: '#FEF3E8',
+              borderRadius: 6, fontSize: 13, color: '#7B341E', lineHeight: 1.7,
+            }}>
+              {archetype.growthEdge}
+            </div>
+          </div>
+        </div>
+
+        {/* HTP 상징 연결 */}
+        {archetype.htpSymbol && (
+          <div style={{
+            padding: '10px 14px', background: meta.bg,
+            borderRadius: 8, border: `1px solid ${meta.border}`,
+            fontSize: 13, color: '#4A5568', lineHeight: 1.7,
+          }}>
+            <strong style={{ color: meta.color }}>🎨 HTP 상징 연결:</strong>{' '}
+            {archetype.htpSymbol}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   Big5ProfileCard — 레이더 차트 + TCI 프로파일
+   ════════════════════════════════════════════════════════════ */
+const BIG5_META = {
+  O: { label: '개방성', fullLabel: 'Openness',        color: '#7B5EA7', low: '보수적·실용적', high: '창의적·호기심' },
+  C: { label: '성실성', fullLabel: 'Conscientiousness', color: '#2E75B6', low: '유연·즉흥적',   high: '계획적·책임감' },
+  E: { label: '외향성', fullLabel: 'Extraversion',     color: '#C05621', low: '내향적·조용',   high: '사교적·활동적' },
+  A: { label: '친화성', fullLabel: 'Agreeableness',    color: '#38A169', low: '경쟁적·직설적', high: '협력적·공감' },
+  N: { label: '신경성', fullLabel: 'Neuroticism',      color: '#D69E2E', low: '안정적·침착',   high: '예민·감정기복' },
+};
+
+const TCI_META = {
+  NS: { label: '새로움 추구', color: '#C05621', low: '신중·일관', high: '충동·탐색' },
+  HA: { label: '위험 회피',   color: '#2C7A7B', low: '낙관·대담', high: '걱정·억제' },
+  RD: { label: '보상 의존',   color: '#276749', low: '독립·냉정', high: '공감·인정 욕구' },
+  P:  { label: '인내',        color: '#2E75B6', low: '유연·쉽게 포기', high: '끈기·완벽주의' },
+};
+
+function Big5RadarSVG({ scores }) {
+  const dims  = ['O', 'C', 'E', 'A', 'N'];
+  const cx    = 130, cy = 130, r = 100;
+  const n     = dims.length;
+
+  // 꼭짓점 계산 (위쪽부터 시계방향)
+  const angle  = (i) => (Math.PI * 2 * i) / n - Math.PI / 2;
+  const pt     = (i, scale) => ({
+    x: cx + r * scale * Math.cos(angle(i)),
+    y: cy + r * scale * Math.sin(angle(i)),
+  });
+
+  // 배경 격자 (20 40 60 80 100)
+  const gridLevels = [0.2, 0.4, 0.6, 0.8, 1.0];
+
+  const gridPath = (scale) =>
+    dims.map((_, i) => {
+      const p = pt(i, scale);
+      return `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+    }).join(' ') + ' Z';
+
+  // 데이터 폴리곤
+  const dataPath = dims.map((d, i) => {
+    const scale = (scores[d] ?? 50) / 100;
+    const p     = pt(i, scale);
+    return `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+  }).join(' ') + ' Z';
+
+  return (
+    <svg viewBox="0 0 260 260" style={{ width: '100%', maxWidth: 260 }}>
+      {/* 격자 */}
+      {gridLevels.map((scale, gi) => (
+        <path key={gi} d={gridPath(scale)}
+          fill="none" stroke="#E2E8F0" strokeWidth={gi === 4 ? 1.5 : 1} />
+      ))}
+      {/* 축 선 */}
+      {dims.map((_, i) => {
+        const p = pt(i, 1.0);
+        return <line key={i} x1={cx} y1={cy} x2={p.x.toFixed(1)} y2={p.y.toFixed(1)}
+          stroke="#E2E8F0" strokeWidth={1} />;
+      })}
+      {/* 데이터 폴리곤 */}
+      <path d={dataPath} fill="#2E75B680" stroke="#2E75B6" strokeWidth={2} />
+      {/* 꼭짓점 점 + 레이블 */}
+      {dims.map((d, i) => {
+        const meta  = BIG5_META[d];
+        const scale = (scores[d] ?? 50) / 100;
+        const pData = pt(i, scale);
+        const pLabel = pt(i, 1.18);
+        return (
+          <g key={d}>
+            <circle cx={pData.x.toFixed(1)} cy={pData.y.toFixed(1)} r={4}
+              fill={meta.color} stroke="#fff" strokeWidth={1.5} />
+            <text x={pLabel.x.toFixed(1)} y={pLabel.y.toFixed(1)}
+              textAnchor="middle" dominantBaseline="middle"
+              fontSize={11} fontWeight={700} fill={meta.color}>
+              {meta.label}
+            </text>
+            <text x={pLabel.x.toFixed(1)} y={(parseFloat(pLabel.y) + 13).toFixed(1)}
+              textAnchor="middle" dominantBaseline="middle"
+              fontSize={9.5} fill="#718096">
+              {scores[d] ?? 50}
+            </text>
+          </g>
+        );
+      })}
+      {/* 중앙 점 */}
+      <circle cx={cx} cy={cy} r={2} fill="#CBD5E0" />
+    </svg>
+  );
+}
+
+function Big5ProfileCard({ big5, tci, tciAnchors }) {
+  const dims = ['O', 'C', 'E', 'A', 'N'];
+  const scores = {};
+  dims.forEach(d => { scores[d] = big5?.[d]?.score ?? 50; });
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card-header" style={{ background: 'linear-gradient(135deg, #1A365D 0%, #2E75B6 100%)' }}>
+        <h1>📊 Big5 × TCI 성격 프로파일</h1>
+        <p>드로잉 이미지 40% · 과정 지표 35% · 언어 반응 25% 가중 합산</p>
+      </div>
+      <div className="card-body">
+
+        {/* 레이더 + 점수 바 */}
+        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-start', marginBottom: 20 }}>
+          {/* 레이더 차트 */}
+          <div style={{ flexShrink: 0, width: 220 }}>
+            <Big5RadarSVG scores={scores} />
+          </div>
+
+          {/* 점수 바 */}
+          <div style={{ flex: 1, minWidth: 200, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {dims.map(d => {
+              const meta  = BIG5_META[d];
+              const score = scores[d];
+              return (
+                <div key={d}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{
+                        background: meta.color, color: '#fff',
+                        borderRadius: 4, padding: '1px 6px',
+                        fontSize: 10, fontWeight: 700,
+                      }}>{d}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#2D3748' }}>{meta.label}</span>
+                      <span style={{ fontSize: 10, color: '#A0AEC0' }}>{meta.fullLabel}</span>
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: meta.color }}>{score}</span>
+                  </div>
+                  <div style={{ position: 'relative', height: 8, background: '#EDF2F7', borderRadius: 99 }}>
+                    <div style={{
+                      position: 'absolute', left: 0, top: 0,
+                      width: `${score}%`, height: '100%',
+                      background: meta.color, borderRadius: 99,
+                      transition: 'width 0.6s ease',
+                    }} />
+                    {/* 50 중앙선 */}
+                    <div style={{
+                      position: 'absolute', left: '50%', top: -2,
+                      width: 1, height: 12, background: '#CBD5E0',
+                    }} />
+                  </div>
+                  <div style={{
+                    display: 'flex', justifyContent: 'space-between',
+                    fontSize: 9.5, color: '#A0AEC0', marginTop: 2,
+                  }}>
+                    <span>{meta.low}</span>
+                    <span>{meta.high}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Big5 차원별 해석 */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+          {dims.map(d => {
+            const meta = BIG5_META[d];
+            const dim  = big5?.[d];
+            if (!dim?.interpretation) return null;
+            return (
+              <div key={d} style={{
+                flex: '1 1 180px',
+                padding: '10px 12px',
+                background: meta.color + '10',
+                borderRadius: 8,
+                border: `1px solid ${meta.color}40`,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                  <span style={{
+                    background: meta.color, color: '#fff',
+                    borderRadius: 4, padding: '1px 7px',
+                    fontSize: 10, fontWeight: 700,
+                  }}>{d}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: meta.color }}>{meta.label}</span>
+                  {dim.keySymbol && (
+                    <span style={{ fontSize: 10, color: '#A0AEC0', fontStyle: 'italic' }}>
+                      — {dim.keySymbol}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 12, color: '#4A5568', lineHeight: 1.65 }}>
+                  {dim.interpretation}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* TCI 기질 프로파일 */}
+        {tci && (
+          <div>
+            <div style={{
+              fontSize: 12, fontWeight: 700, color: '#718096',
+              marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              <span>🧬 TCI 기질 프로파일</span>
+              <span style={{ fontSize: 10, color: '#A0AEC0', fontWeight: 400 }}>
+                (Cloninger의 신경생물학적 기질 4차원)
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+              {Object.entries(TCI_META).map(([key, meta]) => {
+                const dim = tci[key];
+                if (!dim) return null;
+                const levelColors = { high: meta.color, mid: '#718096', low: '#A0AEC0' };
+                const levelLabels = { high: '高', mid: '中', low: '低' };
+                return (
+                  <div key={key} style={{
+                    flex: '1 1 150px',
+                    padding: '10px 12px',
+                    background: '#F7FAFC',
+                    borderRadius: 8,
+                    border: `1.5px solid ${levelColors[dim.level] ?? '#CBD5E0'}40`,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <span style={{
+                        background: levelColors[dim.level] ?? '#CBD5E0',
+                        color: '#fff', borderRadius: 4,
+                        padding: '1px 6px', fontSize: 10, fontWeight: 700,
+                      }}>
+                        {key}
+                      </span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#2D3748' }}>
+                        {meta.label}
+                      </span>
+                      <span style={{
+                        fontSize: 11, fontWeight: 700,
+                        color: levelColors[dim.level] ?? '#CBD5E0',
+                      }}>
+                        {levelLabels[dim.level] ?? '-'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 11, color: '#718096', lineHeight: 1.6 }}>
+                      {dim.evidence}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* TCI 행동닻 해석 */}
+        {tciAnchors && (
+          <div style={{
+            padding: '12px 14px', background: '#F0EBF8',
+            borderRadius: 8, borderLeft: '3px solid #7B5EA7',
+            fontSize: 13, color: '#4A5568', lineHeight: 1.75,
+          }}>
+            <strong style={{ color: '#7B5EA7' }}>🧬 기질 행동닻 해석:</strong>{' '}
+            {tciAnchors}
+          </div>
+        )}
       </div>
     </div>
   );

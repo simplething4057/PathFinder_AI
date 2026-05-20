@@ -1,13 +1,12 @@
-# PathFinder AI — Railway 배포 가이드
+# PathFinder AI — 클라우드타입 배포 가이드
 
-> 백엔드(Express) + PostgreSQL → Railway  
-> 프론트엔드(Vite/React) → Railway Static Site
+> 백엔드(Express) + PostgreSQL + 프론트엔드(Vite/React) → 클라우드타입 하나의 프로젝트로 배포
 
 ---
 
 ## 사전 준비
 
-1. [railway.app](https://railway.app) 계정 생성
+1. [cloudtype.app](https://cloudtype.app) 계정 생성 (GitHub 소셜 로그인 권장)
 2. GitHub에 프로젝트 push (아래 참고)
 3. Anthropic API 키 준비
 
@@ -30,23 +29,56 @@ git push -u origin main
 
 ---
 
-## STEP 1 — Railway 프로젝트 생성
+## 구조 한눈에 보기
 
-1. railway.app 접속 → **New Project**
-2. **Deploy from GitHub repo** 선택 → 저장소 연결
-3. 서비스가 자동 감지되면 일단 **취소** (서비스를 수동으로 구성할 예정)
+클라우드타입에서 **하나의 프로젝트** 안에 서비스 3개를 배포합니다.
+
+```
+클라우드타입 프로젝트
+├── postgresql-prod   ← PostgreSQL DB (서비스명이 곧 내부 호스트명)
+├── pathfinder-server ← Node.js 백엔드 (서브디렉토리: pathfinder-server/)
+└── pathfinder-app    ← React 정적 사이트 (서브디렉토리: pathfinder-app/)
+```
+
+백엔드 → DB 통신은 `postgresql-prod:5432`(내부 호스트)로 SSL 없이 연결됩니다.
 
 ---
 
-## STEP 2 — PostgreSQL 추가
+## STEP 1 — GitHub push 후 클라우드타입 접속
 
-1. 프로젝트 화면에서 **+ Add Service** → **Database** → **PostgreSQL**
-2. 생성 완료 후 PostgreSQL 서비스를 클릭 → **Variables** 탭
-3. `DATABASE_URL` 값을 복사해 둡니다 (백엔드 서비스에 자동 주입됩니다)
+[app.cloudtype.io](https://app.cloudtype.io) → **새 프로젝트 생성**
+
+프로젝트 이름: `pathfinder-ai` (자유)
+
+---
+
+## STEP 2 — PostgreSQL 서비스 추가
+
+1. 프로젝트 화면 → **서비스 추가** → `⌘+K` 또는 검색창에 `postgres` 입력 → **PostgreSQL** 선택
+2. **설정변경** 클릭 → 서비스 이름을 **`postgresql-prod`** 으로 설정 (⚠️ 이 이름이 내부 호스트명이 됩니다)
+3. **Root Password** 입력 후 **배포하기**
+
+배포 완료 후 해당 서비스 → **도메인 탭** 에서 아래 두 주소를 확인합니다.
+
+| 용도 | 형식 | 비고 |
+|------|------|------|
+| 내부 통신 (백엔드→DB) | `postgresql-prod:5432` | 고정, SSL 불필요 |
+| 외부 접속 (pgAdmin 등) | `svc.xxx.cloudtype.app:[포트]` | TCP 허용 필요, 재배포 시 포트 변경 |
 
 ### DB 스키마 초기화
 
-PostgreSQL 서비스 → **Query** 탭에서 아래 SQL 실행:
+#### 방법 A — pgAdmin / DBeaver (외부 툴)
+
+1. 프로젝트 설정(⚙️) → **TCP 외부 접속 허용하기** 활성화 → 적용
+2. 외부 호스트(`svc.xxx.cloudtype.app:[포트]`)로 접속
+   - User: `postgres`
+   - Password: 위에서 설정한 Root Password
+   - Database: `postgres`
+3. 아래 SQL 실행 후 TCP 허용 다시 비활성화 권장
+
+#### 방법 B — 백엔드 서비스 터미널 (STEP 3 배포 후)
+
+백엔드 서비스 → **터미널** 탭 → `psql -h postgresql-prod -U postgres` 접속 후 SQL 실행
 
 ```sql
 CREATE TABLE IF NOT EXISTS users (
@@ -95,68 +127,68 @@ CREATE TABLE IF NOT EXISTS analysis_results (
 
 ## STEP 3 — 백엔드 서비스 배포
 
-1. 프로젝트 화면 → **+ Add Service** → **GitHub Repo** → 같은 저장소 선택
-2. 서비스 설정:
-   - **Root Directory**: `pathfinder-server`
-   - **Start Command**: `node src/index.js` (package.json의 start 스크립트 자동 감지)
-
-3. **Variables** 탭에서 환경변수 추가:
+1. 프로젝트 화면 → **서비스 추가** → `⌘+K` → `node` 검색 → **Node.js** 선택
+2. **나의 저장소 선택** → `pathfinder-ai` 저장소 선택
+3. **설정변경** 클릭:
+   - **서브 디렉토리**: `pathfinder-server`
+   - **Start Command**: `npm start`
+   - **Port**: `3001`
+4. **환경변수** 설정 (배포 전 또는 후에 설정 가능):
 
 | 변수명 | 값 |
-|---|---|
-| `DATABASE_URL` | (PostgreSQL 서비스에서 자동 주입 — Reference Variable로 연결) |
-| `ANTHROPIC_API_KEY` | `sk-ant-api03-...` (실제 키 입력) |
+|--------|-----|
+| `DB_HOST` | `postgresql-prod` |
+| `DB_PORT` | `5432` |
+| `DB_NAME` | `postgres` |
+| `DB_USER` | `postgres` |
+| `DB_PASSWORD` | STEP 2에서 설정한 Root Password |
+| `ANTHROPIC_API_KEY` | `sk-ant-api03-...` |
 | `JWT_SECRET` | 랜덤 문자열 64자 이상 |
-| `CLIENT_ORIGIN` | 프론트엔드 배포 URL (나중에 입력) |
+| `CLIENT_ORIGIN` | (STEP 4 완료 후 입력) |
 | `NODE_ENV` | `production` |
+| `PORT` | `3001` |
 
-> `DATABASE_URL` 연결 방법: Variables 탭 → **Add Reference Variable** → PostgreSQL 서비스의 `DATABASE_URL` 선택
+5. **배포하기** → 완료 후 도메인 탭에서 **백엔드 URL** 복사
+   - 예: `https://pathfinder-server.kr1.cldtype.io`
 
-4. 배포 완료 후 **백엔드 URL** 복사 (예: `https://pathfinder-server-production.up.railway.app`)
+> `DATABASE_URL` 환경변수를 설정하지 않으면 `db/index.js`가 자동으로 개별 변수(`DB_HOST` 등) 방식으로 동작합니다.
 
 ---
 
 ## STEP 4 — 프론트엔드 서비스 배포
 
-1. 프로젝트 화면 → **+ Add Service** → **GitHub Repo** → 같은 저장소 선택
-2. 서비스 설정:
-   - **Root Directory**: `pathfinder-app`
+1. 프로젝트 화면 → **서비스 추가** → `⌘+K` → `node` 검색 → **Node.js** 선택
+2. **나의 저장소 선택** → 같은 `pathfinder-ai` 저장소 선택
+3. **설정변경** 클릭:
+   - **서브 디렉토리**: `pathfinder-app`
+   - **Install Command**: `npm install`
    - **Build Command**: `npm run build`
-   - **Start Command**: `npx serve dist -l $PORT` (또는 아래 참고)
-
-> Railway에서 정적 사이트를 serve하려면 `serve` 패키지가 필요합니다:
-> ```bash
-> # pathfinder-app 폴더에서 로컬 실행
-> npm install serve --save-dev
-> ```
-> package.json scripts에 추가:
-> ```json
-> "serve": "serve dist -l $PORT"
-> ```
-> Start Command: `npm run serve`
-
-3. **Variables** 탭에서 환경변수 추가:
+   - **Start Command**: `npm run serve`
+   - **Port**: `3000`
+4. **환경변수** 설정:
 
 | 변수명 | 값 |
-|---|---|
+|--------|-----|
 | `VITE_API_URL` | STEP 3에서 복사한 백엔드 URL |
 | `VITE_USE_MOCK` | `false` |
 
-4. 배포 완료 후 **프론트엔드 URL** 복사
+5. **배포하기** → 완료 후 도메인 탭에서 **프론트엔드 URL** 복사
+
+> `npm run serve`는 `serve dist -l $PORT`를 실행합니다. 클라우드타입이 `PORT` 환경변수를 자동 주입합니다.
 
 ---
 
 ## STEP 5 — CORS 설정 업데이트
 
-백엔드 서비스 → **Variables** 탭에서:
+백엔드 서비스 → **환경변수** 탭:
 
 ```
-CLIENT_ORIGIN = https://pathfinder-app-production.up.railway.app
+CLIENT_ORIGIN = https://pathfinder-app.kr1.cldtype.io
 ```
 
-(STEP 4에서 얻은 프론트엔드 URL로 교체)
+(STEP 4에서 얻은 실제 프론트엔드 URL로 교체)
 
-변수 저장 → 백엔드 서비스 자동 재배포 대기
+저장 후 백엔드 서비스 **재배포** (우측 상단 재배포 버튼 또는 git push)
 
 ---
 
@@ -180,27 +212,43 @@ curl -X POST https://YOUR_BACKEND_URL/api/auth/register \
 ## 배포 후 유지보수
 
 ### 코드 업데이트 배포
+
 ```bash
 git push origin main
-# → Railway가 변경된 서비스를 자동 감지해 재배포
+# → 클라우드타입이 변경된 서비스를 자동 감지해 재배포
 ```
 
 ### 로그 확인
-Railway 각 서비스 → **Deployments** 탭 → 최신 배포 클릭 → **Logs**
 
-### 무료 플랜 한계
-- Railway 무료 플랜: 월 $5 크레딧 (소규모 사용 시 충분)
-- PostgreSQL 스토리지: 1GB
-- 트래픽 초과 시 유료 플랜 업그레이드 필요
+각 서비스 → **로그뷰** 탭에서 실시간 로그 확인
+
+### 이전 버전 복원
+
+각 서비스 → **배포 이력** 탭 → 원하는 버전 클릭 → **복원**
+
+---
+
+## ⚠️ 데이터 백업 주의
+
+클라우드타입 PostgreSQL은 **자동 백업을 지원하지 않습니다**.
+정기적으로 아래 명령으로 수동 백업하세요:
+
+```bash
+# 로컬에서 실행 (TCP 외부 접속 허용 상태에서)
+pg_dump -h svc.xxx.cloudtype.app -p [포트] -U postgres -d postgres > backup_$(date +%Y%m%d).sql
+```
+
+운영 단계에서는 **Neon** (클라우드타입 Integrations 지원, 자동 백업 포함) 사용을 권장합니다.
 
 ---
 
 ## 문제 해결
 
 | 증상 | 원인 | 해결 |
-|---|---|---|
-| `ECONNREFUSED` DB 오류 | `DATABASE_URL` 미설정 | Variables에서 Reference Variable 재확인 |
-| CORS 오류 | `CLIENT_ORIGIN` 불일치 | 프론트엔드 URL 정확히 입력 |
-| 빌드 실패 | `serve` 패키지 없음 | `npm install serve --save-dev` 후 push |
-| API 401 오류 | `JWT_SECRET` 환경변수 누락 | Variables 탭 확인 |
+|------|------|------|
+| `ECONNREFUSED` DB 오류 | `DB_HOST` / `DB_PASSWORD` 오입력 | 환경변수에서 PostgreSQL 서비스명·비밀번호 재확인 |
+| CORS 오류 | `CLIENT_ORIGIN` 불일치 | 프론트엔드 URL 정확히 입력 후 백엔드 재배포 |
+| 빌드 실패 (프론트) | `serve` 패키지 없음 | `pathfinder-app/package.json`의 `serve` 의존성 확인 |
+| API 401 오류 | `JWT_SECRET` 미설정 | 환경변수 탭 확인 |
 | Claude API 오류 | `ANTHROPIC_API_KEY` 오류 | 실제 API 키 값 재입력 |
+| 포트 불일치 | Start Command와 PORT 환경변수 불일치 | `PORT=3001` 환경변수와 클라우드타입 포트 설정 동일하게 맞추기 |
